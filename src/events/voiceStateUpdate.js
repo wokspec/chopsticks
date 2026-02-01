@@ -1,6 +1,6 @@
+// src/events/voiceStateUpdate.js
 import { ChannelType, PermissionsBitField } from "discord.js";
 import { loadGuildData, saveGuildData } from "../utils/storage.js";
-import { startVoiceSession, endVoiceSession } from "../tools/leveling/levelingController.js";
 
 export default {
   name: "voiceStateUpdate",
@@ -10,40 +10,41 @@ export default {
     if (!guild) return;
 
     const guildId = guild.id;
-    const userId = newState.id;
-    const now = Date.now();
-
-    if (!oldState.channelId && newState.channelId) {
-      startVoiceSession(guildId, userId, now);
-    }
-
-    if (oldState.channelId && !newState.channelId) {
-      endVoiceSession(guildId, userId, now);
-    }
-
-    if (
-      oldState.channelId &&
-      newState.channelId &&
-      oldState.channelId !== newState.channelId
-    ) {
-      endVoiceSession(guildId, userId, now);
-      startVoiceSession(guildId, userId, now);
-    }
+    const member = newState.member ?? oldState.member;
+    if (!member) return;
 
     const data = loadGuildData(guildId);
 
-    if (
-      newState.channelId &&
-      newState.channelId !== oldState.channelId
-    ) {
-      const lobby = data.lobbies?.[newState.channelId];
-      if (!lobby || lobby.enabled !== true) return;
+    // --- NORMALIZE STORAGE (one-time safety) ---
+    const voice = data.voice ?? { lobbies: {}, tempChannels: {} };
+    data.voice = voice;
 
-      const member = newState.member;
-      if (!member) return;
+    const oldChannelId = oldState.channelId;
+    const newChannelId = newState.channelId;
+
+    // ======================================================
+    // JOIN LOBBY → CREATE (ENFORCE ONE TEMP PER USER)
+    // ======================================================
+    if (newChannelId && newChannelId !== oldChannelId) {
+      const lobby = voice.lobbies[newChannelId];
+      if (!lobby) return;
+
+      // If user already owns a temp channel, move them there instead
+      const existingTempId = Object.entries(voice.tempChannels)
+        .find(([, v]) => v.ownerId === member.id)?.[0];
+
+      if (existingTempId) {
+        const existing = guild.channels.cache.get(existingTempId);
+        if (existing) {
+          await member.voice.setChannel(existing).catch(() => {});
+          return;
+        }
+      }
 
       const channel = await guild.channels.create({
-        name: `${member.user.username}'s room`,
+        name: lobby.nameTemplate
+          ? lobby.nameTemplate.replace("{user}", member.user.username)
+          : `${member.user.username}'s room`,
         type: ChannelType.GuildVoice,
         parent: lobby.categoryId,
         permissionOverwrites: [
@@ -57,28 +58,32 @@ export default {
         ]
       });
 
-      data.tempChannels[channel.id] = {
+      voice.tempChannels[channel.id] = {
         ownerId: member.id,
-        lobbyId: newState.channelId
+        lobbyId: newChannelId
       };
 
       saveGuildData(guildId, data);
-      await member.voice.setChannel(channel);
+      await member.voice.setChannel(channel).catch(() => {});
       return;
     }
 
-    if (
-      oldState.channelId &&
-      oldState.channelId !== newState.channelId
-    ) {
-      const temp = data.tempChannels?.[oldState.channelId];
+    // ======================================================
+    // LEAVE TEMP → DELETE IF EMPTY
+    // ======================================================
+    if (oldChannelId && oldChannelId !== newChannelId) {
+      const temp = voice.tempChannels[oldChannelId];
       if (!temp) return;
 
-      const channel = guild.channels.cache.get(oldState.channelId);
-      if (!channel) return;
+      const channel = guild.channels.cache.get(oldChannelId);
+      if (!channel) {
+        delete voice.tempChannels[oldChannelId];
+        saveGuildData(guildId, data);
+        return;
+      }
 
       if (channel.members.size === 0) {
-        delete data.tempChannels[oldState.channelId];
+        delete voice.tempChannels[oldChannelId];
         saveGuildData(guildId, data);
         await channel.delete().catch(() => {});
       }

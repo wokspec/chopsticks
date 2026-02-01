@@ -1,36 +1,36 @@
-// src/tools/voice/controller.js
 import { loadGuildData, saveGuildData } from "../../utils/storage.js";
 
-/*
-Authoritative data model:
-
-{
-  lobbies: {
-    [lobbyChannelId]: {
-      categoryId,
-      enabled: true | false
-    }
-  },
-  tempChannels: {
-    [tempChannelId]: {
-      ownerId,
-      lobbyId
-    }
+function ensureVoice(data) {
+  if (!data.voice) {
+    data.voice = { lobbies: {}, tempChannels: {} };
   }
+  return data.voice;
 }
-*/
+export const getStatus = async guildId => {
+  const data = loadGuildData(guildId);
+
+  if (!data.voice) {
+    return {
+      lobbies: {},
+      tempChannels: {}
+    };
+  }
+
+  return data.voice;
+};
 
 export const addLobby = async (guildId, lobbyChannelId, categoryId) => {
   const data = loadGuildData(guildId);
+  const voice = ensureVoice(data);
 
-  // Already exists and enabled → no-op
-  if (data.lobbies[lobbyChannelId]?.enabled) {
+  if (voice.lobbies[lobbyChannelId]?.enabled === true) {
     return false;
   }
 
-  data.lobbies[lobbyChannelId] = {
+  voice.lobbies[lobbyChannelId] = {
     categoryId,
-    enabled: true
+    enabled: true,
+    nameTemplate: "🔊 {user}"
   };
 
   saveGuildData(guildId, data);
@@ -39,19 +39,18 @@ export const addLobby = async (guildId, lobbyChannelId, categoryId) => {
 
 export const removeLobby = async (guildId, lobbyChannelId) => {
   const data = loadGuildData(guildId);
+  const voice = ensureVoice(data);
 
-  const lobby = data.lobbies[lobbyChannelId];
+  const lobby = voice.lobbies[lobbyChannelId];
   if (!lobby || lobby.enabled === false) {
     return false;
   }
 
-  // Disable instead of deleting — prevents resurrection loop
-  data.lobbies[lobbyChannelId].enabled = false;
+  lobby.enabled = false;
 
-  // Clean up orphan temp channels defensively
-  for (const tempId of Object.keys(data.tempChannels)) {
-    if (data.tempChannels[tempId].lobbyId === lobbyChannelId) {
-      delete data.tempChannels[tempId];
+  for (const [id, temp] of Object.entries(voice.tempChannels)) {
+    if (temp.lobbyId === lobbyChannelId) {
+      delete voice.tempChannels[id];
     }
   }
 
@@ -59,13 +58,8 @@ export const removeLobby = async (guildId, lobbyChannelId) => {
   return true;
 };
 
-export const resetVoice = async (guildId) => {
-  saveGuildData(guildId, {
-    lobbies: {},
-    tempChannels: {}
-  });
-};
-
-export const getStatus = async (guildId) => {
-  return loadGuildData(guildId);
+export const resetVoice = async guildId => {
+  const data = loadGuildData(guildId);
+  data.voice = { lobbies: {}, tempChannels: {} };
+  saveGuildData(guildId, data);
 };

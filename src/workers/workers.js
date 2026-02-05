@@ -1,77 +1,54 @@
-import { Client, GatewayIntentBits } from "discord.js";
+// src/workers/workers.js
 import WebSocket from "ws";
+import { MSG } from "../shared/protocol.js";
+import { validateMessage } from "../shared/validateMessage.js";
 
-/* ───────── ENV GUARDS ───────── */
-
-const token = process.env.WORKER_TOKEN;
-if (!token) {
-  console.error("[worker] WORKER_TOKEN missing");
-  process.exit(1);
+if (!process.env.CONTROL_URL) {
+  throw new Error("CONTROL_URL missing");
 }
 
-const controlUrl = process.env.CONTROL_URL;
-if (!controlUrl) {
-  console.error("[worker] CONTROL_URL missing");
-  process.exit(1);
-}
+const ws = new WebSocket(process.env.CONTROL_URL);
+let workerId = null;
 
-/* ───────── DISCORD CLIENT ───────── */
-
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds
-  ]
+ws.on("open", () => {
+  ws.send(JSON.stringify({ type: MSG.REGISTER }));
 });
 
-/* ───────── CONTROL WS ───────── */
+ws.on("message", raw => {
+  let msg;
+  try {
+    msg = JSON.parse(raw);
+  } catch {
+    return;
+  }
 
-let ws = null;
-let registered = false;
+  if (!validateMessage(msg)) return;
 
-/* ───────── LIFECYCLE ───────── */
+  if (msg.type === MSG.ASSIGN_ID) {
+    workerId = msg.workerId;
+    console.log(`[worker] registered ${workerId}`);
+    return;
+  }
 
-client.once("ready", () => {
-  console.log(`[worker] online as ${client.user.tag}`);
+  if (msg.type !== MSG.COMMAND) return;
 
-  ws = new WebSocket(controlUrl);
+  const { action, guildId, channelId, query } = msg.payload;
 
-  ws.once("open", () => {
-    ws.send(JSON.stringify({
-      type: "REGISTER",
-      workerId: client.user.id
-    }));
+  if (action === "PLAY") {
+    console.log(`[worker:${workerId}] PLAY ${query} (${guildId}:${channelId})`);
+  }
 
-    registered = true;
-  });
+  if (action === "SKIP") {
+    console.log(`[worker:${workerId}] SKIP (${guildId}:${channelId})`);
+  }
 
-  ws.once("close", () => {
-    console.error("[worker] control connection closed");
-    process.exit(1);
-  });
+  if (action === "STOP") {
+    console.log(`[worker:${workerId}] STOP (${guildId}:${channelId})`);
+  }
 
-  ws.once("error", err => {
-    console.error("[worker] control ws error", err);
-    process.exit(1);
-  });
+  ws.send(JSON.stringify({
+    type: MSG.ACK,
+    id: msg.id,
+    workerId
+  }));
 });
-
-client.on("error", err => {
-  console.error("[worker] discord error", err);
-  process.exit(1);
-});
-
-/* ───────── HARD FAIL SAFETY ───────── */
-
-process.on("unhandledRejection", err => {
-  console.error("[worker] unhandled rejection", err);
-  process.exit(1);
-});
-
-process.on("uncaughtException", err => {
-  console.error("[worker] uncaught exception", err);
-  process.exit(1);
-});
-
-/* ───────── START ───────── */
-
-await client.login(token);

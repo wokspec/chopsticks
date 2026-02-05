@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-  "lavalink": "java -jar lavalink/Lavalink.jar --spring.config.location=file:./lavalink/application.yml",
-  "control": "node src/control/controlServer.js",
-  "bot": "node src/index.js",
-  "all": "concurrently \"npm run lavalink\" \"npm run control\" \"npm run bot\""
-
+    "lavalink": "java -jar lavalink/Lavalink.jar",
+    "control": "node src/control/controlServer.js",
+    "bot": "node src/index.js",
+    "worker": "node src/workers/workers.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:logs": "pm2 logs",
+    "deploy": "node scripts/deployCommands.js"
   },
   "dependencies": {
     "discord.js": "^14.16.0",

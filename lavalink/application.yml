@@ -1,11 +1,7 @@
 server:
-  port: 8080
+  port: 2333
 
 spring:
-  main:
-    banner-mode: "off"
-  config:
-    import: "optional:configserver:"
   cloud:
     config:
       enabled: false
@@ -14,6 +10,25 @@ lavalink:
   server:
     password: "youshallnotpass"
 
+    sources:
+      youtube: true
+      bandcamp: true
+      soundcloud: true
+      twitch: true
+      vimeo: true
+      http: true
+
+    bufferDurationMs: 400
+    youtubePlaylistLoadLimit: 6
+    playerUpdateInterval: 5
+    youtubeSearchEnabled: true
+    soundcloudSearchEnabled: true
+
+metrics:
+  prometheus:
+    enabled: false
+
 logging:
   level:
     root: INFO
+    lavalink: INFO

@@ -1,53 +1,73 @@
 import { WebSocketServer } from "ws";
 
 const PORT = 3001;
-let started = false;
+const workers = new Map();
 
-export function startControlServer() {
-  if (started) return;
-  started = true;
+const wss = new WebSocketServer({ port: PORT });
 
-  const wss = new WebSocketServer({ port: PORT });
-  const workers = new Map();
+console.log(`[control] listening on :${PORT}`);
 
-  console.log(`[control] listening on :${PORT}`);
+wss.on("connection", ws => {
+  let workerId = null;
+  console.log("[control] socket connected");
 
-  wss.on("connection", ws => {
-    let workerId = null;
+  ws.on("message", raw => {
+    let msg;
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      console.log("[control] invalid json");
+      return;
+    }
 
-    ws.on("message", raw => {
-      let msg;
-      try {
-        msg = JSON.parse(raw);
-      } catch {
-        return;
+    if (msg.type === "REGISTER") {
+      workerId = `w-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      workers.set(workerId, { ws, assigned: null });
+
+      ws.send(JSON.stringify({
+        type: "ASSIGN_ID",
+        workerId
+      }));
+
+      console.log("[control] worker registered", workerId);
+      return;
+    }
+
+    if (msg.type === "PLAY" || msg.type === "SKIP" || msg.type === "STOP") {
+      const { guildId, channelId } = msg;
+      if (!guildId || !channelId) return;
+
+      const key = `${guildId}:${channelId}`;
+      let assignedWs = null;
+
+      for (const info of workers.values()) {
+        if (info.assigned === key) {
+          assignedWs = info.ws;
+          break;
+        }
       }
 
-      if (msg.type !== "REGISTER" || !msg.workerId) return;
-
-      if (workers.has(msg.workerId)) {
-        ws.close();
-        return;
+      if (!assignedWs) {
+        for (const info of workers.values()) {
+          if (!info.assigned) {
+            info.assigned = key;
+            assignedWs = info.ws;
+            break;
+          }
+        }
       }
 
-      workerId = msg.workerId;
-      workers.set(workerId, ws);
-
-      console.log("[control] worker registered:", workerId);
-    });
-
-    ws.on("close", () => {
-      if (!workerId) return;
-      workers.delete(workerId);
-      console.log("[control] worker disconnected:", workerId);
-    });
-
-    ws.on("error", () => {
-      if (!workerId) return;
-      workers.delete(workerId);
-      console.log("[control] worker errored:", workerId);
-    });
+      if (assignedWs) {
+        assignedWs.send(JSON.stringify(msg));
+        console.log("[control] routed", msg.type, "to", key);
+      }
+    }
   });
-}
 
-startControlServer();
+  ws.on("close", () => {
+    if (workerId) {
+      workers.delete(workerId);
+      console.log("[control] worker disconnected", workerId);
+    }
+  });
+});

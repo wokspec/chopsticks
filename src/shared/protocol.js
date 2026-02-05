@@ -1,9 +1,11 @@
-// src/shared/protocol.js
 export const MSG = {
   REGISTER: "REGISTER",
-  ASSIGN: "ASSIGN",
-  PLAY: "PLAY",
-  STOP: "STOP",
-  SKIP: "SKIP",
+  ASSIGN_ID: "ASSIGN_ID",
+
+  COMMAND: "COMMAND",
+  ACK: "ACK",
+  ERROR: "ERROR",
+
+  HEARTBEAT: "HEARTBEAT",
   FREE: "FREE"
 };

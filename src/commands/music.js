@@ -39,19 +39,19 @@ export async function execute(interaction) {
 
   if (sub === "play") {
     const query = interaction.options.getString("query");
-    sendControl({ type: "PLAY", guildId, channelId, query });
+    sendControl("PLAY", { guildId, channelId, query });
     await interaction.editReply("Queued.");
     return;
   }
 
   if (sub === "skip") {
-    sendControl({ type: "SKIP", guildId, channelId });
+    sendControl("SKIP", { guildId, channelId });
     await interaction.editReply("Skipped.");
     return;
   }
 
   if (sub === "stop") {
-    sendControl({ type: "STOP", guildId, channelId });
+    sendControl("STOP", { guildId, channelId });
     await interaction.editReply("Stopped.");
   }
 }

@@ -1,0 +1,17 @@
+{
+  email wokspecialists@proton.me
+}
+
+chopsticks.example.com {
+  encode zstd gzip
+
+  handle_path /metrics* {
+    reverse_proxy 127.0.0.1:9100
+  }
+
+  handle_path /healthz* {
+    reverse_proxy 127.0.0.1:9100
+  }
+
+  reverse_proxy 127.0.0.1:8788
+}

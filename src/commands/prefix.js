@@ -1,0 +1,33 @@
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from "discord.js";
+import { loadGuildData, saveGuildData } from "../utils/storage.js";
+
+export const meta = {
+  guildOnly: true,
+  userPerms: [PermissionFlagsBits.ManageGuild]
+};
+
+export const data = new SlashCommandBuilder()
+  .setName("prefix")
+  .setDescription("View or set the prefix")
+  .addStringOption(o =>
+    o.setName("value").setDescription("New prefix (1-4 chars)").setRequired(false)
+  );
+
+export async function execute(interaction) {
+  const data = await loadGuildData(interaction.guildId);
+  data.prefix ??= { value: "!" };
+  const value = interaction.options.getString("value");
+  if (!value) {
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      content: `Current prefix: ${data.prefix.value || "!"}`
+    });
+    return;
+  }
+  data.prefix.value = value.slice(0, 4);
+  await saveGuildData(interaction.guildId, data);
+  await interaction.reply({
+    flags: MessageFlags.Ephemeral,
+    content: `Prefix set to ${data.prefix.value}`
+  });
+}

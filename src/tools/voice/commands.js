@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 
 import * as VoiceDomain from "./domain.js";
+import { auditLog } from "../../utils/audit.js";
 
 export const data = new SlashCommandBuilder()
   .setName("voice")
@@ -36,6 +37,20 @@ export const data = new SlashCommandBuilder()
         o
           .setName("template")
           .setDescription("Channel name template (use {user})")
+      )
+      .addIntegerOption(o =>
+        o
+          .setName("user_limit")
+          .setDescription("User limit for temp channels (0 = unlimited)")
+          .setMinValue(0)
+          .setMaxValue(99)
+      )
+      .addIntegerOption(o =>
+        o
+          .setName("bitrate_kbps")
+          .setDescription("Bitrate for temp channels (kbps)")
+          .setMinValue(8)
+          .setMaxValue(512)
       )
   )
 
@@ -80,6 +95,38 @@ export const data = new SlashCommandBuilder()
 
   .addSubcommand(sub =>
     sub
+      .setName("update")
+      .setDescription("Update lobby settings")
+      .addChannelOption(o =>
+        o
+          .setName("channel")
+          .setDescription("Lobby channel to update")
+          .addChannelTypes(ChannelType.GuildVoice)
+          .setRequired(true)
+      )
+      .addStringOption(o =>
+        o
+          .setName("template")
+          .setDescription("Channel name template (use {user})")
+      )
+      .addIntegerOption(o =>
+        o
+          .setName("user_limit")
+          .setDescription("User limit for temp channels (0 = unlimited)")
+          .setMinValue(0)
+          .setMaxValue(99)
+      )
+      .addIntegerOption(o =>
+        o
+          .setName("bitrate_kbps")
+          .setDescription("Bitrate for temp channels (kbps)")
+          .setMinValue(8)
+          .setMaxValue(512)
+      )
+  )
+
+  .addSubcommand(sub =>
+    sub
       .setName("status")
       .setDescription("Show current voice configuration")
   )
@@ -101,8 +148,18 @@ export async function execute(interaction) {
       guildId,
       interaction.options.getChannel("channel").id,
       interaction.options.getChannel("category").id,
-      interaction.options.getString("template") ?? "{user}'s room"
+      interaction.options.getString("template") ?? "{user}'s room",
+      {
+        userLimit: interaction.options.getInteger("user_limit"),
+        bitrateKbps: interaction.options.getInteger("bitrate_kbps")
+      }
     );
+    await auditLog({
+      guildId,
+      userId: interaction.user.id,
+      action: "voice.lobby.add",
+      details: res
+    });
     await interaction.reply({ content: JSON.stringify(res), ephemeral: true });
     return;
   }
@@ -112,6 +169,12 @@ export async function execute(interaction) {
       guildId,
       interaction.options.getChannel("channel").id
     );
+    await auditLog({
+      guildId,
+      userId: interaction.user.id,
+      action: "voice.lobby.remove",
+      details: res
+    });
     await interaction.reply({ content: JSON.stringify(res), ephemeral: true });
     return;
   }
@@ -122,6 +185,32 @@ export async function execute(interaction) {
       interaction.options.getChannel("channel").id,
       sub === "enable"
     );
+    await auditLog({
+      guildId,
+      userId: interaction.user.id,
+      action: `voice.lobby.${sub}`,
+      details: res
+    });
+    await interaction.reply({ content: JSON.stringify(res), ephemeral: true });
+    return;
+  }
+
+  if (sub === "update") {
+    const res = await VoiceDomain.updateLobby(
+      guildId,
+      interaction.options.getChannel("channel").id,
+      {
+        template: interaction.options.getString("template") ?? undefined,
+        userLimit: interaction.options.getInteger("user_limit"),
+        bitrateKbps: interaction.options.getInteger("bitrate_kbps")
+      }
+    );
+    await auditLog({
+      guildId,
+      userId: interaction.user.id,
+      action: "voice.lobby.update",
+      details: res
+    });
     await interaction.reply({ content: JSON.stringify(res), ephemeral: true });
     return;
   }

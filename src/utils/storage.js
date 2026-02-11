@@ -6,10 +6,36 @@ import crypto from "node:crypto";
 const DATA_DIR = path.join(process.cwd(), "data");
 const SCHEMA_VERSION = 1;
 const MAX_SAVE_RETRIES = 5;
+const STORAGE_DRIVER = String(process.env.STORAGE_DRIVER || "file").toLowerCase();
+const GUILD_CACHE_TTL_SEC = Math.max(
+  0,
+  Math.trunc(Number(process.env.GUILD_CACHE_TTL_SEC ?? 30))
+);
 
-function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+let pgModule = null;
+let cacheModule = null;
+
+async function getPg() {
+  if (!pgModule) {
+    pgModule = await import("./storage_pg.js");
+  }
+  return pgModule;
 }
+
+async function getCache() {
+  if (!cacheModule) cacheModule = await import("./cache.js");
+  return cacheModule;
+}
+
+export async function ensureSchema() {
+  if (STORAGE_DRIVER === "postgres") {
+    const pg = await getPg();
+    await pg.ensureSchema();
+  }
+  // No-op for file storage as files are created on demand
+}
+
+
 
 function guildFile(guildId) {
   return path.join(DATA_DIR, `${guildId}.json`);
@@ -20,7 +46,34 @@ function baseData() {
     schemaVersion: SCHEMA_VERSION,
     rev: 0,
     voice: { lobbies: {}, tempChannels: {} },
-    music: { defaultMode: "open" } // "open" | "dj"
+    music: { defaultMode: "open", defaultVolume: 100, limits: {} }, // "open" | "dj"
+    assistant: {
+      enabled: false,
+      maxListenSec: 10,
+      silenceMs: 1200,
+      cooldownSec: 8,
+      allowRoleIds: [],
+      allowChannelIds: [],
+      maxSessions: 2,
+      voice: null,
+      voicePresets: [],
+      channelVoices: {},
+      profiles: {},
+      channelProfiles: {},
+      voicePersonalities: {},
+      rotation: { enabled: false, intervalSec: 60, channelVoices: {} },
+      wake: { required: true, word: "chopsticks" }
+    },
+    dashboard: { allowUserIds: [], allowRoleIds: [] },
+    prefix: { value: "!", aliases: {} },
+    commandPerms: {}, // commandName -> { roleIds: [] }
+    commandSettings: { disabled: {}, categoriesDisabled: [] }, // disabled commands/categories
+    moderation: { warnings: {} }, // userId -> [{ by, reason, at }]
+    customCommands: {}, // name -> { response }
+    macros: {}, // name -> [{ name, args }]
+    commandLogs: [], // recent executions
+    welcome: { enabled: false, channelId: null, message: "Welcome {user}!" },
+    autorole: { enabled: false, roleId: null }
   };
 }
 
@@ -32,6 +85,13 @@ function normalizeMusic(raw) {
   const m = isPlainObject(raw?.music) ? { ...raw.music } : {};
   const defaultMode = String(m.defaultMode ?? "open").toLowerCase();
   m.defaultMode = defaultMode === "dj" ? "dj" : "open";
+  const v = Number(m.defaultVolume);
+  if (Number.isFinite(v)) {
+    m.defaultVolume = Math.min(150, Math.max(0, Math.trunc(v)));
+  } else {
+    m.defaultVolume = 100;
+  }
+  if (!isPlainObject(m.limits)) m.limits = {};
   return m;
 }
 
@@ -51,6 +111,65 @@ function normalizeData(input) {
 
   out.voice = voice;
   out.music = normalizeMusic(raw);
+  if (!isPlainObject(out.dashboard)) out.dashboard = {};
+  if (!Array.isArray(out.dashboard.allowUserIds)) out.dashboard.allowUserIds = [];
+  if (!Array.isArray(out.dashboard.allowRoleIds)) out.dashboard.allowRoleIds = [];
+  if (!isPlainObject(out.prefix)) out.prefix = {};
+  if (typeof out.prefix.value !== "string" || !out.prefix.value.trim()) out.prefix.value = "!";
+  if (!isPlainObject(out.prefix.aliases)) out.prefix.aliases = {};
+  if (!isPlainObject(out.commandSettings)) out.commandSettings = {};
+  if (!isPlainObject(out.commandSettings.disabled)) out.commandSettings.disabled = {};
+  if (!Array.isArray(out.commandSettings.categoriesDisabled)) out.commandSettings.categoriesDisabled = [];
+  if (!isPlainObject(out.customCommands)) out.customCommands = {};
+  if (!isPlainObject(out.macros)) out.macros = {};
+  if (!Array.isArray(out.commandLogs)) out.commandLogs = [];
+  if (!isPlainObject(out.commandPerms)) out.commandPerms = {};
+  if (!isPlainObject(out.moderation)) out.moderation = {};
+  if (!isPlainObject(out.moderation.warnings)) out.moderation.warnings = {};
+  if (!isPlainObject(out.welcome)) out.welcome = {};
+  if (typeof out.welcome.enabled !== "boolean") out.welcome.enabled = false;
+  if (typeof out.welcome.channelId !== "string") out.welcome.channelId = null;
+  if (typeof out.welcome.message !== "string") out.welcome.message = "Welcome {user}!";
+  if (!isPlainObject(out.autorole)) out.autorole = {};
+  if (typeof out.autorole.enabled !== "boolean") out.autorole.enabled = false;
+  if (typeof out.autorole.roleId !== "string") out.autorole.roleId = null;
+
+  if (!isPlainObject(out.assistant)) out.assistant = {};
+  if (typeof out.assistant.enabled !== "boolean") out.assistant.enabled = false;
+  const maxListenSec = Number(out.assistant.maxListenSec);
+  out.assistant.maxListenSec = Number.isFinite(maxListenSec)
+    ? Math.min(30, Math.max(2, Math.trunc(maxListenSec)))
+    : 10;
+  const silenceMs = Number(out.assistant.silenceMs);
+  out.assistant.silenceMs = Number.isFinite(silenceMs)
+    ? Math.min(5000, Math.max(500, Math.trunc(silenceMs)))
+    : 1200;
+  const cooldownSec = Number(out.assistant.cooldownSec);
+  out.assistant.cooldownSec = Number.isFinite(cooldownSec)
+    ? Math.min(120, Math.max(0, Math.trunc(cooldownSec)))
+    : 8;
+  if (!Array.isArray(out.assistant.allowRoleIds)) out.assistant.allowRoleIds = [];
+  if (!Array.isArray(out.assistant.allowChannelIds)) out.assistant.allowChannelIds = [];
+  const maxSessions = Number(out.assistant.maxSessions);
+  out.assistant.maxSessions = Number.isFinite(maxSessions)
+    ? Math.min(10, Math.max(1, Math.trunc(maxSessions)))
+    : 2;
+  if (typeof out.assistant.voice !== "string") out.assistant.voice = null;
+  if (!Array.isArray(out.assistant.voicePresets)) out.assistant.voicePresets = [];
+  if (!isPlainObject(out.assistant.channelVoices)) out.assistant.channelVoices = {};
+  if (!isPlainObject(out.assistant.profiles)) out.assistant.profiles = {};
+  if (!isPlainObject(out.assistant.channelProfiles)) out.assistant.channelProfiles = {};
+  if (!isPlainObject(out.assistant.voicePersonalities)) out.assistant.voicePersonalities = {};
+  if (!isPlainObject(out.assistant.rotation)) out.assistant.rotation = {};
+  if (typeof out.assistant.rotation.enabled !== "boolean") out.assistant.rotation.enabled = false;
+  const rInt = Number(out.assistant.rotation.intervalSec);
+  out.assistant.rotation.intervalSec = Number.isFinite(rInt)
+    ? Math.min(3600, Math.max(5, Math.trunc(rInt)))
+    : 60;
+  if (!isPlainObject(out.assistant.rotation.channelVoices)) out.assistant.rotation.channelVoices = {};
+  if (!isPlainObject(out.assistant.wake)) out.assistant.wake = {};
+  if (typeof out.assistant.wake.required !== "boolean") out.assistant.wake.required = true;
+  if (typeof out.assistant.wake.word !== "string") out.assistant.wake.word = "chopsticks";
 
   out.schemaVersion = Number.isInteger(raw.schemaVersion) ? raw.schemaVersion : SCHEMA_VERSION;
   out.rev = Number.isInteger(raw.rev) && raw.rev >= 0 ? raw.rev : 0;
@@ -59,6 +178,14 @@ function normalizeData(input) {
   if ("tempChannels" in out) delete out.tempChannels;
 
   return out;
+}
+
+export function normalizeGuildData(input) {
+  return normalizeData(input);
+}
+
+export function mergeGuildData(latest, incoming) {
+  return mergeOnConflict(latest, incoming);
 }
 
 function detectNeedsMigration(raw, normalized) {
@@ -163,26 +290,79 @@ function mergeOnConflict(latest, incoming) {
   };
 }
 
-export function loadGuildData(guildId) {
+export async function loadGuildData(guildId) {
+  if (STORAGE_DRIVER === "postgres") {
+    const fallback = () => baseData();
+    try {
+      if (GUILD_CACHE_TTL_SEC > 0) {
+        const cache = await getCache();
+        const cached = await cache.cacheGet(`guild:${guildId}`);
+        if (cached) return normalizeData(cached);
+      }
+      const pg = await getPg();
+      const data = await pg.loadGuildDataPg(guildId, fallback);
+      const normalized = normalizeData(data);
+      if (GUILD_CACHE_TTL_SEC > 0) {
+        const cache = await getCache();
+        await cache.cacheSet(`guild:${guildId}`, normalized, GUILD_CACHE_TTL_SEC);
+      }
+      return normalized;
+    } catch {
+      return baseData();
+    }
+  }
   ensureDir();
   const file = guildFile(guildId);
   const { data } = readGuildDataWithFallback(file);
   return data ?? baseData();
 }
 
-export function ensureGuildData(guildId) {
+export async function ensureGuildData(guildId) {
+  if (STORAGE_DRIVER === "postgres") {
+    const fallback = () => baseData();
+    try {
+      if (GUILD_CACHE_TTL_SEC > 0) {
+        const cache = await getCache();
+        const cached = await cache.cacheGet(`guild:${guildId}`);
+        if (cached) return normalizeData(cached);
+      }
+      const pg = await getPg();
+      const data = await pg.loadGuildDataPg(guildId, fallback);
+      const normalized = normalizeData(data);
+      if (GUILD_CACHE_TTL_SEC > 0) {
+        const cache = await getCache();
+        await cache.cacheSet(`guild:${guildId}`, normalized, GUILD_CACHE_TTL_SEC);
+      }
+      return normalized;
+    } catch {
+      return baseData();
+    }
+  }
   ensureDir();
   const file = guildFile(guildId);
   const { data, needsWrite } = readGuildDataWithFallback(file);
   if (needsWrite) {
     try {
-      saveGuildData(guildId, data);
+      await saveGuildData(guildId, data);
     } catch {}
   }
   return data;
 }
 
-export function saveGuildData(guildId, data) {
+export async function saveGuildData(guildId, data) {
+  if (STORAGE_DRIVER === "postgres") {
+    try {
+      const pg = await getPg();
+      const saved = await pg.saveGuildDataPg(guildId, data, normalizeData, mergeOnConflict);
+      if (GUILD_CACHE_TTL_SEC > 0) {
+        const cache = await getCache();
+        await cache.cacheSet(`guild:${guildId}`, normalizeData(saved), GUILD_CACHE_TTL_SEC);
+      }
+      return saved;
+    } catch {
+      throw new Error("save-failed");
+    }
+  }
   ensureDir();
   const file = guildFile(guildId);
 
@@ -210,3 +390,39 @@ export function saveGuildData(guildId, data) {
 
   throw new Error("save-conflict");
 }
+
+export async function insertAgentBot(agentId, token, clientId, tag) {
+  const pg = await getPg();
+  return pg.insertAgentBot(agentId, token, clientId, tag);
+}
+
+export async function fetchAgentBots() {
+  const pg = await getPg();
+  return pg.fetchAgentBots();
+}
+
+export async function updateAgentBotStatus(agentId, status) {
+  const pg = await getPg();
+  return pg.updateAgentBotStatus(agentId, status);
+}
+
+export async function deleteAgentBot(agentId) {
+  const pg = await getPg();
+  return pg.deleteAgentBot(agentId);
+}
+
+export async function upsertAgentRunner(runnerId, lastSeen, meta) {
+  const pg = await getPg();
+  return pg.upsertAgentRunner(runnerId, lastSeen, meta);
+}
+
+export async function fetchAgentRunners() {
+  const pg = await getPg();
+  return pg.fetchAgentRunners();
+}
+
+export async function deleteAgentRunner(runnerId) {
+  const pg = await getPg();
+  return pg.deleteAgentRunner(runnerId);
+}
+

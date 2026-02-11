@@ -7,8 +7,8 @@ import {
   saveVoiceState
 } from "./schema.js";
 
-export function addLobby(guildId, channelId, categoryId, template) {
-  const voice = getVoiceState(guildId);
+export async function addLobby(guildId, channelId, categoryId, template, opts = {}) {
+  const voice = await getVoiceState(guildId);
 
   voice.lobbies ??= {};
   voice.tempChannels ??= {};
@@ -17,41 +17,64 @@ export function addLobby(guildId, channelId, categoryId, template) {
     channelId,
     categoryId,
     nameTemplate: template,
-    enabled: true
+    enabled: true,
+    userLimit: Number.isFinite(opts.userLimit) ? Math.max(0, Math.trunc(opts.userLimit)) : 0,
+    bitrateKbps: Number.isFinite(opts.bitrateKbps)
+      ? Math.max(8, Math.min(512, Math.trunc(opts.bitrateKbps)))
+      : null
   };
 
-  saveVoiceState(guildId, voice);
+  await saveVoiceState(guildId, voice);
   return { ok: true, action: "add", channelId };
 }
 
-export function removeLobby(guildId, channelId) {
-  const voice = getVoiceState(guildId);
+export async function removeLobby(guildId, channelId) {
+  const voice = await getVoiceState(guildId);
   delete voice.lobbies?.[channelId];
-  saveVoiceState(guildId, voice);
+  await saveVoiceState(guildId, voice);
   return { ok: true, action: "remove", channelId };
 }
 
-export function setLobbyEnabled(guildId, channelId, enabled) {
-  const voice = getVoiceState(guildId);
+export async function setLobbyEnabled(guildId, channelId, enabled) {
+  const voice = await getVoiceState(guildId);
   if (!voice.lobbies?.[channelId]) {
     return { ok: false, error: "lobby-not-found" };
   }
 
   voice.lobbies[channelId].enabled = enabled;
-  saveVoiceState(guildId, voice);
+  await saveVoiceState(guildId, voice);
   return { ok: true, action: enabled ? "enable" : "disable", channelId };
 }
 
-export function getStatus(guildId) {
-  const voice = getVoiceState(guildId);
+export async function updateLobby(guildId, channelId, patch = {}) {
+  const voice = await getVoiceState(guildId);
+  const lobby = voice.lobbies?.[channelId];
+  if (!lobby) return { ok: false, error: "lobby-not-found" };
+
+  if (typeof patch.template === "string") lobby.nameTemplate = patch.template;
+  if (Number.isFinite(patch.userLimit)) {
+    lobby.userLimit = Math.max(0, Math.trunc(patch.userLimit));
+  }
+  if (patch.bitrateKbps === null) {
+    lobby.bitrateKbps = null;
+  } else if (Number.isFinite(patch.bitrateKbps)) {
+    lobby.bitrateKbps = Math.max(8, Math.min(512, Math.trunc(patch.bitrateKbps)));
+  }
+
+  await saveVoiceState(guildId, voice);
+  return { ok: true, action: "update", channelId };
+}
+
+export async function getStatus(guildId) {
+  const voice = await getVoiceState(guildId);
   return {
     lobbies: voice.lobbies ?? {},
     tempChannels: voice.tempChannels ?? {}
   };
 }
 
-export function resetVoice(guildId) {
-  saveVoiceState(guildId, {
+export async function resetVoice(guildId) {
+  await saveVoiceState(guildId, {
     lobbies: {},
     tempChannels: {}
   });

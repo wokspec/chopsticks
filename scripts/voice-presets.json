@@ -1,0 +1,23 @@
+{
+  "default": {
+    "voiceName": "default",
+    "description": "en_US-lessac-medium (default)",
+    "binUrl": "https://sourceforge.net/projects/piper-tts.mirror/files/2023.11.14-2/piper_linux_x86_64.tar.gz/download",
+    "modelUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx?download=true",
+    "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json?download=true"
+  },
+  "lessac-medium": {
+    "voiceName": "lessac-medium",
+    "description": "en_US-lessac-medium",
+    "binUrl": "https://sourceforge.net/projects/piper-tts.mirror/files/2023.11.14-2/piper_linux_x86_64.tar.gz/download",
+    "modelUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx?download=true",
+    "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json?download=true"
+  },
+  "amy-medium": {
+    "voiceName": "amy-medium",
+    "description": "en_US-amy-medium",
+    "binUrl": "https://sourceforge.net/projects/piper-tts.mirror/files/2023.11.14-2/piper_linux_x86_64.tar.gz/download",
+    "modelUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx?download=true",
+    "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx.json?download=true"
+  }
+}

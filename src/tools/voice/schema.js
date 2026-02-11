@@ -26,19 +26,21 @@ function readMeta(voice) {
 }
 
 export function initGuildVoiceState(guildId) {
-  const data = loadGuildData(guildId);
-  const saved = saveGuildData(guildId, data);
-  return attachMeta(saved.voice, guildId, saved.rev);
+  return (async () => {
+    const data = await loadGuildData(guildId);
+    const saved = await saveGuildData(guildId, data);
+    return attachMeta(saved.voice, guildId, saved.rev);
+  })();
 }
 
-export function getVoiceState(guildId) {
-  const data = loadGuildData(guildId);
+export async function getVoiceState(guildId) {
+  const data = await loadGuildData(guildId);
   return attachMeta(data.voice, guildId, data.rev);
 }
 
-export function saveVoiceState(guildId, voice) {
+export async function saveVoiceState(guildId, voice) {
   const meta = readMeta(voice);
-  const data = loadGuildData(guildId);
+  const data = await loadGuildData(guildId);
 
   data.voice = voice;
 
@@ -46,7 +48,7 @@ export function saveVoiceState(guildId, voice) {
     data.rev = meta.rev;
   }
 
-  const saved = saveGuildData(guildId, data);
+  const saved = await saveGuildData(guildId, data);
   attachMeta(voice, guildId, saved.rev);
   return voice;
 }

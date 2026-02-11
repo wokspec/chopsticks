@@ -4,8 +4,8 @@ import { ensureVoiceState } from "./state.js";
 
 /* ---------- GET ---------- */
 
-export function getLobbyLimits(guildId, channelId) {
-  const data = loadGuildData(guildId);
+export async function getLobbyLimits(guildId, channelId) {
+  const data = await loadGuildData(guildId);
   ensureVoiceState(data);
 
   const lobby = data.voice.lobbies[channelId];
@@ -23,8 +23,8 @@ export function getLobbyLimits(guildId, channelId) {
 
 /* ---------- SET ---------- */
 
-export function setLobbyLimits(guildId, channelId, options) {
-  const data = loadGuildData(guildId);
+export async function setLobbyLimits(guildId, channelId, options) {
+  const data = await loadGuildData(guildId);
   ensureVoiceState(data);
 
   const lobby = data.voice.lobbies[channelId];
@@ -61,6 +61,6 @@ export function setLobbyLimits(guildId, channelId, options) {
 
   if (!changed) return { ok: true, noop: true };
 
-  saveGuildData(guildId, data);
+  await saveGuildData(guildId, data);
   return { ok: true };
 }

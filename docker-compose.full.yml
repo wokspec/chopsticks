@@ -1,0 +1,13 @@
+version: "3.9"
+
+# Full stack: core + voice services
+# Usage:
+#   docker compose -f docker-compose.stack.yml -f docker-compose.voice.yml -f docker-compose.full.yml up -d --build
+
+services:
+  # nothing to override; file exists as a marker and for future overrides
+  # keep for consistent deploy commands
+  noop:
+    image: alpine:3.20
+    command: ["sh","-c","echo full stack enabled" ]
+    profiles: ["fullstack"]

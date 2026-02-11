@@ -1,17 +1,42 @@
 // src/music/config.js
 import { loadGuildData, saveGuildData } from "../utils/storage.js";
 
-export function getMusicConfig(guildId) {
-  const data = loadGuildData(guildId);
+export async function getMusicConfig(guildId) {
+  const data = await loadGuildData(guildId);
   const mode = String(data?.music?.defaultMode ?? "open").toLowerCase() === "dj" ? "dj" : "open";
-  return { defaultMode: mode };
+  const v = Number(data?.music?.defaultVolume ?? 100);
+  const defaultVolume = Number.isFinite(v) ? Math.min(150, Math.max(0, Math.trunc(v))) : 100;
+  const limits = data?.music?.limits ?? {};
+  const maxQueue = Number(process.env.MUSIC_MAX_QUEUE ?? limits.maxQueue ?? 100);
+  const maxTrackMinutes = Number(process.env.MUSIC_MAX_TRACK_MINUTES ?? limits.maxTrackMinutes ?? 20);
+  const maxQueueMinutes = Number(process.env.MUSIC_MAX_QUEUE_MINUTES ?? limits.maxQueueMinutes ?? 120);
+  return {
+    defaultMode: mode,
+    defaultVolume,
+    limits: {
+      maxQueue: Number.isFinite(maxQueue) ? Math.max(1, Math.trunc(maxQueue)) : 100,
+      maxTrackMinutes: Number.isFinite(maxTrackMinutes) ? Math.max(1, Math.trunc(maxTrackMinutes)) : 20,
+      maxQueueMinutes: Number.isFinite(maxQueueMinutes) ? Math.max(1, Math.trunc(maxQueueMinutes)) : 120
+    }
+  };
 }
 
-export function setDefaultMusicMode(guildId, mode) {
+export async function setDefaultMusicMode(guildId, mode) {
   const m = String(mode ?? "").toLowerCase() === "dj" ? "dj" : "open";
-  const data = loadGuildData(guildId);
+  const data = await loadGuildData(guildId);
   data.music ??= {};
   data.music.defaultMode = m;
-  saveGuildData(guildId, data);
+  await saveGuildData(guildId, data);
   return { ok: true, defaultMode: m };
+}
+
+export async function setDefaultMusicVolume(guildId, volume) {
+  const v = Number(volume);
+  if (!Number.isFinite(v)) return { ok: false, error: "bad-volume" };
+  const clamped = Math.min(150, Math.max(0, Math.trunc(v)));
+  const data = await loadGuildData(guildId);
+  data.music ??= {};
+  data.music.defaultVolume = clamped;
+  await saveGuildData(guildId, data);
+  return { ok: true, defaultVolume: clamped };
 }

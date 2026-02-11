@@ -1,0 +1,9 @@
+{
+  "name": "voice-llm",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "express": "^4.19.2",
+    "undici": "^6.23.0"
+  }
+}

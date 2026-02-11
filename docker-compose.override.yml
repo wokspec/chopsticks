@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  main-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    image: chopsticks-main-bot:latest
+    container_name: chopsticks-main-bot
+    environment:
+      # Discord Bot Token (REQUIRED)
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      # Agent Manager Host and Port (for internal communication with agent-runners)
+      - AGENT_CONTROL_HOST=0.0.0.0 # Listen on all interfaces inside the container
+      - AGENT_CONTROL_PORT=8787
+      - AGENT_TOKEN_KEY=882fa533ccceb75afd234e5b46036a13eb594c100b2136c6d9e68fd08c6bc68b
+      # Health server port
+      - HEALTH_SERVER_PORT=8080
+      # Database connection details (from docker-compose.stack.yml)
+      - POSTGRES_URL=postgresql://chopsticks:chopsticks@postgres:5432/chopsticks
+      # Redis connection details (from docker-compose.stack.yml)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Lavalink connection details (from docker-compose.stack.yml)
+      # Assuming default Lavalink password 'youshallnotpass' if not specified
+      - LAVALINK_HOST=lavalink
+      - LAVALINK_PORT=2333
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+      # Voice service URLs (if used by main bot for some commands)
+      - VOICE_ASSIST_STT_URL=http://voice-stt:9000
+      - VOICE_ASSIST_LLM_URL=http://voice-llm:9001
+      - VOICE_ASSIST_TTS_URL=http://voice-tts:9002
+      # Dev API Credentials
+      - DEV_API_USERNAME=${DEV_API_USERNAME}
+      - DEV_API_PASSWORD=${DEV_API_PASSWORD}
+      # Other environment variables as needed by the main bot
+    ports:
+      - "8080:8080" # Expose health server
+      - "3002:3002" # Expose Development API
+    depends_on:
+      - postgres
+      - redis
+      - lavalink
+      # If voice services are always on, add them here
+      - voice-stt
+      - voice-llm
+      - voice-tts
+    restart: unless-stopped
+    volumes:
+      - .:/app # Mount the entire project for easier development and configuration access
+
+  agent-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.agentrunner
+    image: chopsticks-agent-runner:latest
+    container_name: chopsticks-agent-runner
+    environment:
+      # Agent Manager URL for the runner to connect to the main bot
+      - AGENT_CONTROL_URL=ws://main-bot:8787
+      # Database connection details
+      - POSTGRES_URL=postgresql://chopsticks:chopsticks@postgres:5432/chopsticks
+      # Redis connection details
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Unique ID for the runner, useful for tracking in DB
+      - RUNNER_ID=${HOSTNAME} # Docker sets HOSTNAME to container ID by default
+      # Polling interval for DB changes (e.g., agent status updates)
+      - AGENT_RUNNER_POLL_INTERVAL_MS=10000
+      # Agent Invite Permissions (from AgentManager config)
+      - AGENT_INVITE_PERMS=${AGENT_INVITE_PERMS:-3147776}
+      - AGENT_TOKEN_KEY=882fa533ccceb75afd234e5b46036a13eb594c100b2136c6d9e68fd08c6bc68b
+      # Voice service URLs (agents spawned by runner might need these)
+      - VOICE_ASSIST_STT_URL=http://voice-stt:9000
+      - VOICE_ASSIST_LLM_URL=http://voice-llm:9001
+      - VOICE_ASSIST_TTS_URL=http://voice-tts:9002
+      - VOICE_WHISPER_MODEL=${VOICE_WHISPER_MODEL:-small} # from docker-compose.voice.yml
+      - VOICE_WHISPER_DEVICE=${VOICE_WHISPER_DEVICE:-cpu} # from docker-compose.voice.yml
+      - VOICE_WHISPER_COMPUTE_TYPE=${VOICE_WHISPER_COMPUTE_TYPE:-int8} # from docker-compose.voice.yml
+      - VOICE_WHISPER_CPU_THREADS=${VOICE_WHISPER_CPU_THREADS:-4} # from docker-compose.voice.yml
+      - VOICE_OLLAMA_MODEL=${VOICE_OLLAMA_MODEL:-llama3.1:8b} # from docker-compose.voice.yml
+      - VOICE_OLLAMA_OPTIONS=${VOICE_OLLAMA_OPTIONS:-} # from docker-compose.voice.yml
+    depends_on:
+      - main-bot # Must connect to the main bot's AgentManager
+      - postgres
+      - redis
+      - lavalink
+      # If voice services are always on, add them here
+      - voice-stt
+      - voice-llm
+      - voice-tts
+    restart: unless-stopped
+    volumes:
+      - .:/app # Mount the entire project for easier development and configuration access

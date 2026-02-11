@@ -40,6 +40,12 @@ export function formatMusicError(reasonOrErr) {
   if (msg === "agent-offline") return "Music agent went offline. Try again.";
   if (msg === "agent-timeout") return "Music agent timed out. Try again.";
   if (msg === "voice-not-ready") return "Voice connection not ready yet. Try again.";
+  if (msg === "bad-volume") return "Volume must be between 0 and 150.";
+  if (msg === "queue-full") return "Queue is full for this channel.";
+  if (msg === "track-too-long") return "Track is longer than the server limit.";
+  if (msg === "queue-too-long") return "Queue duration would exceed the server limit.";
+  if (msg === "bad-index") return "Queue index is invalid.";
+  if (msg === "bad-preset" || msg === "preset-failed") return "Audio preset failed.";
 
   return "Command failed.";
 }

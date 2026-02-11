@@ -23,6 +23,18 @@ export function createAgentLavalink(agentClient) {
   }
 
   const STOP_GRACE_MS = clampMs(process.env.MUSIC_STOP_GRACE_MS, 15_000, 0, 300_000);
+  const DEFAULT_VOLUME = clampMs(process.env.MUSIC_DEFAULT_VOLUME, 100, 0, 150);
+  const DEFAULT_MAX_QUEUE = clampMs(process.env.MUSIC_MAX_QUEUE, 100, 1, 10_000);
+  const DEFAULT_MAX_TRACK_MINUTES = clampMs(process.env.MUSIC_MAX_TRACK_MINUTES, 20, 1, 24 * 60);
+  const DEFAULT_MAX_QUEUE_MINUTES = clampMs(process.env.MUSIC_MAX_QUEUE_MINUTES, 120, 1, 24 * 60);
+
+  function normalizeLimits(input) {
+    const l = input && typeof input === "object" ? input : {};
+    const maxQueue = clampMs(l.maxQueue, DEFAULT_MAX_QUEUE, 1, 10_000);
+    const maxTrackMinutes = clampMs(l.maxTrackMinutes, DEFAULT_MAX_TRACK_MINUTES, 1, 24 * 60);
+    const maxQueueMinutes = clampMs(l.maxQueueMinutes, DEFAULT_MAX_QUEUE_MINUTES, 1, 24 * 60);
+    return { maxQueue, maxTrackMinutes, maxQueueMinutes };
+  }
 
   function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
@@ -114,13 +126,27 @@ export function createAgentLavalink(agentClient) {
   async function start() {
     if (manager) return manager;
 
+    const lavalinkHost = process.env.LAVALINK_HOST || "127.0.0.1";
+    const lavalinkPort = Number(process.env.LAVALINK_PORT);
+    const lavalinkPassword = process.env.LAVALINK_PASSWORD;
+
+    if (!lavalinkHost) {
+      throw new Error("Lavalink: LAVALINK_HOST environment variable is not set.");
+    }
+    if (!Number.isFinite(lavalinkPort) || lavalinkPort <= 0) {
+      throw new Error("Lavalink: LAVALINK_PORT environment variable is not a valid number.");
+    }
+    if (!lavalinkPassword) {
+      throw new Error("Lavalink: LAVALINK_PASSWORD environment variable is not set.");
+    }
+
     manager = new LavalinkManager({
       nodes: [
         {
           id: "main",
-          host: process.env.LAVALINK_HOST || "127.0.0.1",
-          port: Number(process.env.LAVALINK_PORT) || 2333,
-          authorization: process.env.LAVALINK_PASSWORD || "youshallnotpass"
+          host: lavalinkHost,
+          port: lavalinkPort,
+          authorization: lavalinkPassword
         }
       ],
       sendToShard: (guildId, payload) => {
@@ -192,6 +218,20 @@ export function createAgentLavalink(agentClient) {
     return player?.queue?.current ?? null;
   }
 
+  function serializeTrack(track) {
+    if (!track) return null;
+    const info = track.info ?? {};
+    return {
+      title: info.title ?? "Unknown title",
+      uri: info.uri ?? null,
+      author: info.author ?? null,
+      length: info.length ?? null,
+      sourceName: info.sourceName ?? null,
+      thumbnail: info.artworkUrl ?? info.thumbnail ?? null, // Added thumbnail
+      requester: track.requester ?? null // Added requester
+    };
+  }
+
   function getQueueTracks(player) {
     const q = player?.queue;
     if (!q) return [];
@@ -199,6 +239,79 @@ export function createAgentLavalink(agentClient) {
     if (Array.isArray(q.items)) return q.items;
     if (Array.isArray(q)) return q;
     return [];
+  }
+
+  function trackLengthMs(track) {
+    const n = Number(track?.info?.length);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.trunc(n);
+  }
+
+  function queueTotalMs(player) {
+    let total = 0;
+    const current = getCurrent(player);
+    const curLen = trackLengthMs(current);
+    if (curLen > 0) total += curLen;
+
+    for (const t of getQueueTracks(player)) {
+      const len = trackLengthMs(t);
+      if (len > 0) total += len;
+    }
+    return total;
+  }
+
+  function queueTotalCount(player) {
+    let count = 0;
+    const current = getCurrent(player);
+    if (current) count++;
+    count += getQueueTracks(player).length;
+    return count;
+  }
+
+  function enforceTrackLimits(player, track, limits) {
+    const maxQueue = Number(limits?.maxQueue);
+    const maxTrackMinutes = Number(limits?.maxTrackMinutes);
+    const maxQueueMinutes = Number(limits?.maxQueueMinutes);
+
+    if (Number.isFinite(maxQueue)) {
+      const count = queueTotalCount(player);
+      if (count + 1 > maxQueue) throw new Error("queue-full");
+    }
+
+    const lengthMs = trackLengthMs(track);
+    if (Number.isFinite(maxTrackMinutes) && lengthMs > 0) {
+      const maxMs = Math.max(1, Math.trunc(maxTrackMinutes)) * 60_000;
+      if (lengthMs > maxMs) throw new Error("track-too-long");
+    }
+
+    if (Number.isFinite(maxQueueMinutes)) {
+      const totalMs = queueTotalMs(player) + lengthMs;
+      const maxMs = Math.max(1, Math.trunc(maxQueueMinutes)) * 60_000;
+      if (totalMs > maxMs) throw new Error("queue-too-long");
+    }
+  }
+
+  function removeTrackAt(player, index) {
+    const q = player?.queue;
+    const i = Math.trunc(Number(index));
+    if (!Number.isFinite(i) || i < 0) return false;
+
+    if (Array.isArray(q?.tracks)) {
+      if (i >= q.tracks.length) return false;
+      q.tracks.splice(i, 1);
+      return true;
+    }
+    if (Array.isArray(q?.items)) {
+      if (i >= q.items.length) return false;
+      q.items.splice(i, 1);
+      return true;
+    }
+    if (Array.isArray(q)) {
+      if (i >= q.length) return false;
+      q.splice(i, 1);
+      return true;
+    }
+    return false;
   }
 
   function bestEffortClearQueue(player) {
@@ -384,7 +497,7 @@ export function createAgentLavalink(agentClient) {
       voiceChannelId: ctx.voiceChannelId,
       textChannelId: ctx.textChannelId,
       selfDeaf: true,
-      volume: 100
+      volume: Number.isFinite(ctx.volume) ? ctx.volume : DEFAULT_VOLUME
     });
 
     await player.connect();
@@ -395,7 +508,15 @@ export function createAgentLavalink(agentClient) {
     return player;
   }
 
-  async function createOrGetSession({ guildId, voiceChannelId, textChannelId, ownerId, defaultMode }) {
+  async function createOrGetSession({
+    guildId,
+    voiceChannelId,
+    textChannelId,
+    ownerId,
+    defaultMode,
+    defaultVolume,
+    limits
+  }) {
     if (!manager) throw new Error("lavalink-not-ready");
     if (!guildId || !voiceChannelId) throw new Error("missing-session");
     if (!ownerId) throw new Error("missing-owner");
@@ -408,6 +529,7 @@ export function createAgentLavalink(agentClient) {
           throw new Error("not-owner");
         }
         if (textChannelId) existing.textChannelId = textChannelId;
+        if (limits) existing.limits = normalizeLimits(limits);
         existing.lastActive = Date.now();
 
         clearStopping(existing);
@@ -428,7 +550,7 @@ export function createAgentLavalink(agentClient) {
         voiceChannelId,
         textChannelId,
         selfDeaf: true,
-        volume: 100
+        volume: Number.isFinite(defaultVolume) ? Math.min(150, Math.max(0, Math.trunc(defaultVolume))) : DEFAULT_VOLUME
       });
 
       await player.connect();
@@ -443,6 +565,10 @@ export function createAgentLavalink(agentClient) {
         ownerId,
         mode: String(defaultMode ?? "open").toLowerCase() === "dj" ? "dj" : "open",
         lastActive: Date.now(),
+        volume: Number.isFinite(defaultVolume)
+          ? Math.min(150, Math.max(0, Math.trunc(defaultVolume)))
+          : DEFAULT_VOLUME,
+        limits: normalizeLimits(limits),
         __stopping: false,
         __destroyAt: null,
         __destroyTimer: null
@@ -497,6 +623,8 @@ export function createAgentLavalink(agentClient) {
       }
 
       const player = ctx.player;
+      const limits = normalizeLimits(ctx.limits);
+      enforceTrackLimits(player, track, limits);
 
       const hadCurrent = Boolean(getCurrent(player));
       const hadUpcoming = getQueueTracks(player).length > 0;
@@ -614,6 +742,27 @@ export function createAgentLavalink(agentClient) {
     }
   }
 
+  function queue(ctx) {
+    const current = getCurrent(ctx.player);
+    const tracks = getQueueTracks(ctx.player).map(serializeTrack);
+    return {
+      current: serializeTrack(current),
+      tracks,
+      mode: ctx.mode,
+      ownerId: ctx.ownerId ?? null
+    };
+  }
+
+  function removeFromQueue(ctx, actorUserId, index, requireOwnerMode = false) {
+    return withCtxLock(ctx, async () => {
+      if (requireOwnerMode) assertOwner(ctx, actorUserId);
+      ctx.lastActive = Date.now();
+      const ok = removeTrackAt(ctx.player, index);
+      if (!ok) throw new Error("bad-index");
+      return { ok: true };
+    });
+  }
+
   function setMode(ctx, actorUserId, mode) {
     return withCtxLock(ctx, async () => {
       ctx.lastActive = Date.now();
@@ -621,6 +770,77 @@ export function createAgentLavalink(agentClient) {
       if (m === "dj") ctx.ownerId = actorUserId;
       ctx.mode = m;
       return { ok: true, action: "mode-set", mode: ctx.mode, ownerId: ctx.ownerId ?? null };
+    });
+  }
+
+  function clampVolume(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    return Math.min(150, Math.max(0, Math.trunc(n)));
+  }
+
+  function presetFilters(name) {
+    const n = String(name || "").toLowerCase();
+    if (n === "flat") return { equalizer: [] };
+    if (n === "bassboost") {
+      return {
+        equalizer: [
+          { band: 0, gain: 0.35 },
+          { band: 1, gain: 0.3 },
+          { band: 2, gain: 0.25 },
+          { band: 3, gain: 0.2 }
+        ]
+      };
+    }
+    if (n === "nightcore") {
+      return { timescale: { speed: 1.1, pitch: 1.2, rate: 1.1 } };
+    }
+    if (n === "vaporwave") {
+      return { timescale: { speed: 0.9, pitch: 0.8, rate: 1.0 } };
+    }
+    if (n === "8d") {
+      return { rotation: { rotationHz: 0.2 } };
+    }
+    return null;
+  }
+
+  async function setVolume(ctx, actorUserId, volume, requireOwnerMode = false) {
+    return withCtxLock(ctx, async () => {
+      if (requireOwnerMode) assertOwner(ctx, actorUserId);
+      ctx.lastActive = Date.now();
+
+      const v = clampVolume(volume);
+      if (v === null) throw new Error("bad-volume");
+
+      const player = ctx.player;
+      let ok = false;
+      try {
+        if (typeof player?.setVolume === "function") {
+          await Promise.resolve(player.setVolume(v));
+          ok = true;
+        }
+      } catch {}
+
+      if (!ok) {
+        const patched = await lavalinkPatch(player, ctx.guildId, { volume: v });
+        if (!patched) throw new Error("bad-volume");
+      }
+
+      ctx.volume = v;
+      return { ok: true, action: "volume-set", volume: v };
+    });
+  }
+
+  async function setPreset(ctx, actorUserId, preset, requireOwnerMode = false) {
+    return withCtxLock(ctx, async () => {
+      if (requireOwnerMode) assertOwner(ctx, actorUserId);
+      ctx.lastActive = Date.now();
+      const filters = presetFilters(preset);
+      if (!filters) throw new Error("bad-preset");
+      const ok = await lavalinkPatch(ctx.player, ctx.guildId, { filters });
+      if (!ok) throw new Error("preset-failed");
+      ctx.preset = String(preset);
+      return { ok: true, preset: ctx.preset };
     });
   }
 
@@ -636,6 +856,10 @@ export function createAgentLavalink(agentClient) {
     stop,
     destroySession,
     destroyAllSessionsInGuild,
-    setMode
+    setMode,
+    setVolume,
+    queue,
+    removeFromQueue,
+    setPreset
   };
 }

@@ -1,5 +1,10 @@
 // src/commands/music.js
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js";
+import {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  MessageFlags,
+  PermissionFlagsBits
+} from "discord.js";
 import {
   ensureSessionAgent,
   getSessionAgent,
@@ -7,6 +12,8 @@ import {
   sendAgentCommand,
   formatMusicError
 } from "../music/service.js";
+import { getMusicConfig, setDefaultMusicMode } from "../music/config.js";
+import { auditLog } from "../utils/audit.js";
 
 export const data = new SlashCommandBuilder()
   .setName("music")
@@ -22,7 +29,46 @@ export const data = new SlashCommandBuilder()
   .addSubcommand(s => s.setName("resume").setDescription("Resume playback"))
   .addSubcommand(s => s.setName("stop").setDescription("Stop playback"))
   .addSubcommand(s => s.setName("now").setDescription("Show current track"))
-  .addSubcommand(s => s.setName("queue").setDescription("Show the queue for this voice channel"));
+  .addSubcommand(s => s.setName("queue").setDescription("Show the queue for this voice channel"))
+  .addSubcommand(s =>
+    s
+      .setName("mode")
+      .setDescription("Set session mode (open or DJ)")
+      .addStringOption(o =>
+        o
+          .setName("mode")
+          .setDescription("open = anyone can control, dj = owner-only")
+          .setRequired(true)
+          .addChoices(
+            { name: "open", value: "open" },
+            { name: "dj", value: "dj" }
+          )
+      )
+  )
+  .addSubcommand(s =>
+    s
+      .setName("default")
+      .setDescription("Set default mode for this server (requires Manage Server)")
+      .addStringOption(o =>
+        o
+          .setName("mode")
+          .setDescription("Default mode for new sessions")
+          .setRequired(true)
+          .addChoices(
+            { name: "open", value: "open" },
+            { name: "dj", value: "dj" }
+          )
+      )
+  )
+  .addSubcommand(s =>
+    s
+      .setName("volume")
+      .setDescription("Set volume (0-150)")
+      .addIntegerOption(o =>
+        o.setName("level").setDescription("0-150").setRequired(true).setMinValue(0).setMaxValue(150)
+      )
+  )
+  .addSubcommand(s => s.setName("status").setDescription("Show session status"));
 
 function requireVoice(interaction) {
   const member = interaction.member;
@@ -51,9 +97,13 @@ async function safeDeferEphemeral(interaction) {
   }
 }
 
-function makeEmbed(title, description, fields = []) {
+function makeEmbed(title, description, fields = [], url = null, thumbnail_url = null, color = null, footer = null) {
   const e = new EmbedBuilder().setTitle(title).setDescription(description ?? "");
   if (Array.isArray(fields) && fields.length) e.addFields(fields);
+  if (url) e.setURL(url);
+  if (thumbnail_url) e.setThumbnail(thumbnail_url);
+  if (color) e.setColor(color);
+  if (footer) e.setFooter(footer);
   return e;
 }
 
@@ -122,6 +172,31 @@ export async function execute(interaction) {
   const userId = interaction.user.id;
   const sub = interaction.options.getSubcommand();
 
+  if (sub === "default") {
+    const perms = interaction.memberPermissions;
+    if (!perms?.has?.(PermissionFlagsBits.ManageGuild)) {
+      await interaction.reply({
+        flags: MessageFlags.Ephemeral,
+        embeds: [makeEmbed("Music", "Manage Server permission required.")]
+      });
+      return;
+    }
+
+    const mode = interaction.options.getString("mode", true);
+    const res = await setDefaultMusicMode(guildId, mode);
+    await auditLog({
+      guildId,
+      userId,
+      action: "music.default.set",
+      details: { mode: res.defaultMode }
+    });
+    await interaction.reply({
+      flags: MessageFlags.Ephemeral,
+      embeds: [makeEmbed("Music", `Default mode set to **${res.defaultMode}**.`)]
+    });
+    return;
+  }
+
   const voiceCheck = requireVoice(interaction);
   if (!voiceCheck.ok) {
     await interaction.reply({
@@ -137,8 +212,22 @@ export async function execute(interaction) {
       const ack = await safeDeferEphemeral(interaction);
       if (!ack.ok) return;
 
+      const query = interaction.options.getString("query", true);
+      if (!String(query).trim()) {
+        await interaction.editReply({
+          embeds: [makeEmbed("Music", "Query is empty.")]
+        });
+        return;
+      }
+      if (String(query).length > 200) {
+        await interaction.editReply({
+          embeds: [makeEmbed("Music", "Query too long.")]
+        });
+        return;
+      }
+
       await interaction.editReply({
-        embeds: [makeEmbed("Music", "Searching…")]
+        embeds: [makeEmbed("Music", `Searching for: **${query}**`)]
       });
 
       const alloc = ensureSessionAgent(guildId, vc.id, {
@@ -147,13 +236,18 @@ export async function execute(interaction) {
       });
 
       if (!alloc.ok) {
+        const errorMsg = formatMusicError(alloc.reason);
+        const embedFields = [];
+        if (alloc.reason === "no-agents-in-guild" || alloc.reason === "no-free-agents") {
+          embedFields.push({ name: "Hint", value: "You might need to deploy more music agents. Use `/agents deploy` to get invite links.", inline: false });
+        }
         await interaction.editReply({
-          embeds: [makeEmbed("Music", formatMusicError(alloc.reason))]
+          embeds: [makeEmbed("Music Error", errorMsg, embedFields, null, null, 0xFF0000)] // Red color for error
         });
         return;
       }
 
-      const query = interaction.options.getString("query", true);
+      const config = await getMusicConfig(guildId);
 
       let result;
       try {
@@ -164,11 +258,14 @@ export async function execute(interaction) {
           ownerUserId: userId,
           actorUserId: userId,
           query,
+          defaultMode: config.defaultMode,
+          defaultVolume: config.defaultVolume,
+          limits: config.limits,
           requester: buildRequester(interaction.user)
         });
       } catch (err) {
         await interaction.editReply({
-          embeds: [makeEmbed("Music", formatMusicError(err))]
+          embeds: [makeEmbed("Music Error", formatMusicError(err), [], null, null, 0xFF0000)] // Red color for error
         });
         return;
       }
@@ -176,16 +273,27 @@ export async function execute(interaction) {
       const track = result?.track ?? null;
       if (!track) {
         await interaction.editReply({
-          embeds: [makeEmbed("Music", "No results.")]
+          embeds: [makeEmbed("Music", "No results found for that query.")]
         });
         return;
       }
 
       const action = String(result?.action ?? "queued");
       const title = action === "playing" ? "Now Playing" : "Queued";
+      const fields = [];
+
+      if (track.author) fields.push({ name: "Artist", value: track.author, inline: true });
+      if (track.duration) fields.push({ name: "Duration", value: new Date(track.duration).toISOString().slice(11, 19), inline: true });
+      if (track.requester?.username) fields.push({ name: "Requested by", value: track.requester.username, inline: true });
 
       await interaction.editReply({
-        embeds: [makeEmbed(title, track.title ?? "Unknown title")]
+        embeds: [makeEmbed(
+          title,
+          track.title ?? "Unknown title",
+          fields,
+          track.uri, // URL for the embed
+          track.thumbnail // Thumbnail URL
+        )]
       });
       return;
     }
@@ -205,7 +313,10 @@ export async function execute(interaction) {
       resume: "resume",
       stop: "stop",
       now: "status",
-      queue: "queue"
+      queue: "queue",
+      status: "status",
+      mode: "setMode",
+      volume: "volume"
     };
 
     const op = opMap[sub];
@@ -227,7 +338,9 @@ export async function execute(interaction) {
         voiceChannelId: vc.id,
         textChannelId: interaction.channelId,
         ownerUserId: userId,
-        actorUserId: userId
+        actorUserId: userId,
+        mode: sub === "mode" ? interaction.options.getString("mode", true) : undefined,
+        volume: sub === "volume" ? interaction.options.getInteger("level", true) : undefined
       });
     } catch (err) {
       if (String(err?.message ?? err) === "no-session") releaseSession(guildId, vc.id);
@@ -246,8 +359,78 @@ export async function execute(interaction) {
         return;
       }
 
+      const fields = [];
+      if (current.author) fields.push({ name: "Artist", value: current.author, inline: true });
+      if (current.duration) fields.push({ name: "Duration", value: new Date(current.duration).toISOString().slice(11, 19), inline: true });
+      if (current.requester?.username) fields.push({ name: "Requested by", value: current.requester.username, inline: true });
+
       await interaction.editReply({
-        embeds: [makeEmbed("Now Playing", current.title ?? "Unknown title")]
+        embeds: [makeEmbed(
+          "Now Playing",
+          current.title ?? "Unknown title",
+          fields,
+          current.uri, // URL for the embed
+          current.thumbnail // Thumbnail URL
+        )]
+      });
+      return;
+    }
+
+    if (sub === "status") {
+      const fields = [];
+      fields.push({
+        name: "Playing",
+        value: result?.playing ? "Yes" : "No",
+        inline: true
+      });
+      fields.push({
+        name: "Paused",
+        value: result?.paused ? "Yes" : "No",
+        inline: true
+      });
+      fields.push({
+        name: "Mode",
+        value: String(result?.mode ?? "open"),
+        inline: true
+      });
+      if (result?.ownerId) {
+        fields.push({
+          name: "Owner",
+          value: `<@${result.ownerId}>`,
+          inline: true
+        });
+      }
+      if (Number.isFinite(result?.queueLength)) {
+        fields.push({
+          name: "Queue",
+          value: String(result.queueLength),
+          inline: true
+        });
+      }
+      if (Number.isFinite(result?.volume)) {
+        fields.push({
+          name: "Volume",
+          value: String(result.volume),
+          inline: true
+        });
+      }
+
+      await interaction.editReply({
+        embeds: [makeEmbed("Status", "Session status.", fields)]
+      });
+      return;
+    }
+
+    if (sub === "mode") {
+      await interaction.editReply({
+        embeds: [makeEmbed("Music", `Mode set to **${result?.mode ?? "open"}**.`)]
+      });
+      return;
+    }
+
+    if (sub === "volume") {
+      await interaction.editReply({
+        embeds: [makeEmbed("Music", `Volume set to **${result?.volume ?? "?"}**.`)]
       });
       return;
     }
@@ -258,7 +441,14 @@ export async function execute(interaction) {
 
       const fields = [];
 
-      if (current?.title) fields.push({ name: "Now", value: current.title, inline: false });
+      if (current?.title) {
+        let currentTrackInfo = `[${current.title}](${current.uri})`;
+        if (current.author) currentTrackInfo += ` by ${current.author}`;
+        if (current.requester?.username) currentTrackInfo += ` (Requested by ${current.requester.username})`;
+        fields.push({ name: "Now Playing", value: currentTrackInfo, inline: false });
+      } else {
+        fields.push({ name: "Now Playing", value: "Nothing currently playing.", inline: false });
+      }
 
       if (tracks.length === 0) {
         fields.push({ name: "Queue", value: "(empty)", inline: false });
@@ -266,14 +456,14 @@ export async function execute(interaction) {
         const lines = [];
         for (let i = 0; i < Math.min(tracks.length, 10); i++) {
           const t = tracks[i];
-          lines.push(`${i + 1}. ${t?.title ?? "Unknown title"}`);
+          lines.push(`${i + 1}. [${t?.title ?? "Unknown title"}](${t.uri})`);
         }
         if (tracks.length > 10) lines.push(`…and ${tracks.length - 10} more`);
-        fields.push({ name: "Queue", value: lines.join("\n"), inline: false });
+        fields.push({ name: "Up Next", value: lines.join("\n"), inline: false });
       }
 
       await interaction.editReply({
-        embeds: [makeEmbed("Queue", "Voice-channel queue.", fields)]
+        embeds: [makeEmbed("Music Queue", "Current voice-channel queue.", fields)]
       });
       return;
     }
@@ -317,12 +507,12 @@ export async function execute(interaction) {
     try {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({
-          embeds: [makeEmbed("Music", msg)]
+          embeds: [makeEmbed("Music Error", msg, [], null, null, 0xFF0000)] // Red color for error
         });
       } else {
         await interaction.reply({
           flags: MessageFlags.Ephemeral,
-          embeds: [makeEmbed("Music", msg)]
+          embeds: [makeEmbed("Music Error", msg, [], null, null, 0xFF0000)] // Red color for error
         });
       }
     } catch {}

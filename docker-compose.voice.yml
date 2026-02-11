@@ -1,0 +1,57 @@
+version: "3.9"
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: chopsticks-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+
+  voice-llm:
+    build:
+      context: ./services/voice-llm
+    container_name: chopsticks-voice-llm
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=${VOICE_OLLAMA_MODEL:-llama3.1:8b}
+      - OLLAMA_OPTIONS=${VOICE_OLLAMA_OPTIONS:-}
+    ports:
+      - "9001:9001"
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  voice-stt:
+    build:
+      context: ./services/voice-stt
+    container_name: chopsticks-voice-stt
+    environment:
+      - WHISPER_MODEL=${VOICE_WHISPER_MODEL:-small}
+      - WHISPER_DEVICE=${VOICE_WHISPER_DEVICE:-cpu}
+      - WHISPER_COMPUTE_TYPE=${VOICE_WHISPER_COMPUTE_TYPE:-int8}
+      - WHISPER_CPU_THREADS=${VOICE_WHISPER_CPU_THREADS:-4}
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+  voice-tts:
+    build:
+      context: ./services/voice-tts
+    container_name: chopsticks-voice-tts
+    environment:
+      - PIPER_BIN=/piper/piper
+      - PIPER_MODEL=/piper/model.onnx
+      - PIPER_CONFIG=/piper/model.onnx.json
+      - PIPER_VOICES_DIR=/piper/voices
+      - TTS_TARGET_RATE=48000
+      - TTS_TARGET_CHANNELS=2
+    volumes:
+      - ./models/piper:/piper:ro
+    ports:
+      - "9002:9002"
+    restart: unless-stopped
+
+volumes:
+  ollama:

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chopsticks Dev Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <h1>Chopsticks Dev Dashboard</h1>
+
+    <% if (error) { %>
+        <p style="color: red;">Error: <%= error %></p>
+    <% } %>
+
+    <section>
+        <h2>System Status</h2>
+        <p>Main Bot Status: <%= botStatus %></p>
+        <p>Uptime: <%= Math.floor(uptime / 3600) %>h <%= Math.floor((uptime % 3600) / 60) %>m <%= Math.floor(uptime % 60) %>s</p>
+    </section>
+
+    <section>
+        <h2>Connected Runners (<%= connectedRunners.length %>)</h2>
+        <% if (connectedRunners.length === 0) { %>
+            <p>No agent runners connected.</p>
+        <% } else { %>
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Runner ID</th>
+                        <th>Last Seen</th>
+                        <th>Active Agents</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% connectedRunners.forEach(runner => { %>
+                        <tr>
+                            <td><%= runner.runnerId %></td>
+                            <td><%= new Date(runner.lastSeen).toLocaleString() %></td>
+                            <td><%= runner.activeAgentIds.join(', ') || 'None' %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <% } %>
+    </section>
+
+    <section>
+        <h2>Registered Agents (<%= registeredAgents.length %>)</h2>
+        <p>These are agents configured in the database. Active agents appear below.</p>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Agent ID</th>
+                    <th>Client ID</th>
+                    <th>Tag</th>
+                    <th>DB Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% registeredAgents.forEach(agent => { %>
+                    <tr>
+                        <td><%= agent.agent_id %></td>
+                        <td><%= agent.client_id %></td>
+                        <td><%= agent.tag %></td>
+                        <td><%= agent.status %></td>
+                        <td>
+                            <form action="/api/agents/update_status" method="POST" style="display:inline;">
+                                <input type="hidden" name="agentId" value="<%= agent.agent_id %>">
+                                <select name="status" onchange="this.form.submit()">
+                                    <option value="active" <%= agent.status === 'active' ? 'selected' : '' %>>Active</option>
+                                    <option value="inactive" <%= agent.status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+                                </select>
+                            </form>
+                            <% if (agent.status === 'inactive') { %>
+                              <form action="/api/agents/start/<%= agent.agent_id %>" method="POST" style="display:inline;" onsubmit="return confirm('Attempt to start agent <%= agent.agent_id %>?');">
+                                  <button type="submit">Start</button>
+                              </form>
+                            <% } %>
+                            <form action="/api/agents/delete" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete <%= agent.agent_id %>? This will permanently remove its token from the database.');">
+                                <input type="hidden" name="agentId" value="<%= agent.agent_id %>">
+                                <button type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Active Agents (<%= activeAgents.length %>)</h2>
+        <p>These agents are currently running on a runner process.</p>
+        <% if (activeAgents.length === 0) { %>
+            <p>No agents currently active.</p>
+        <% } else { %>
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Agent ID</th>
+                        <th>Tag</th>
+                        <th>Status</th>
+                        <th>Runner ID</th>
+                        <th>Last Seen</th>
+                        <th>Last Active</th>
+                        <th>Busy State</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% activeAgents.forEach(agent => { %>
+                        <tr>
+                            <td><%= agent.agentId %></td>
+                            <td><%= agent.tag %></td>
+                            <td><%= agent.ready ? 'Ready' : 'Not Ready' %></td>
+                            <td><%= agent.runnerId || 'N/A' %></td>
+                            <td><%= agent.lastSeen ? new Date(agent.lastSeen).toLocaleString() : 'N/A' %></td>
+                            <td><%= agent.lastActive ? new Date(agent.lastActive).toLocaleString() : 'N/A' %></td>
+                            <td><%= agent.busyKey ? `${agent.busyKind} (${agent.busyKey})` : 'Idle' %></td>
+                            <td>
+                                <form action="/api/agents/restart/<%= agent.agentId %>" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to restart <%= agent.agentId %>?');">
+                                    <button type="submit">Restart</button>
+                                </form>
+                                <form action="/api/agents/stop/<%= agent.agentId %>" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to stop <%= agent.agentId %> and mark it inactive?');">
+                                    <button type="submit">Stop & Inactive</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <% } %>
+    </section>
+
+    <section>
+        <h2>Active Music Sessions (<%= sessions.length %>)</h2>
+        <% if (sessions.length === 0) { %>
+            <p>No active music sessions.</p>
+        <% } else { %>
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Guild ID</th>
+                        <th>Voice Channel ID</th>
+                        <th>Agent ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% sessions.forEach(session => { %>
+                        <tr>
+                            <td><%= session.guildId %></td>
+                            <td><%= session.voiceChannelId %></td>
+                            <td><%= session.agentId %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <% } %>
+    </section>
+
+    <section>
+        <h2>Active Assistant Sessions (<%= assistantSessions.length %>)</h2>
+        <% if (assistantSessions.length === 0) { %>
+            <p>No active assistant sessions.</p>
+        <% } else { %>
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Guild ID</th>
+                        <th>Voice Channel ID</th>
+                        <th>Agent ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% assistantSessions.forEach(session => { %>
+                        <tr>
+                            <td><%= session.guildId %></td>
+                            <td><%= session.voiceChannelId %></td>
+                            <td><%= session.agentId %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <% } %>
+    </section>
+
+    <section>
+        <h2>Add New Agent Token to Database</h2>
+        <form action="/api/agents/add" method="POST">
+            <label for="addToken">Token:</label><br>
+            <input type="text" id="addToken" name="token" required><br><br>
+            <label for="addClientId">Client ID:</label><br>
+            <input type="text" id="addClientId" name="clientId" required><br><br>
+            <label for="addTag">Tag (e.g., BotName#1234):</label><br>
+            <input type="text" id="addTag" name="tag" required><br><br>
+            <button type="submit">Add Agent Token</button>
+        </form>
+    </section>
+
+</body>
+</html>

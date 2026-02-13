@@ -699,6 +699,7 @@ app.get("/", (req, res) => {
               <div><label>template</label><input id="new-tpl" placeholder="{user}'s room" /></div>
               <div><label>user_limit</label><input id="new-ul" type="number" min="0" max="99" value="0" /></div>
               <div><label>bitrate_kbps</label><input id="new-br" type="number" min="8" max="512" /></div>
+              <div><label>max_channels</label><input id="new-mc" type="number" min="0" max="99" placeholder="0 = unlimited" /></div>
               <button onclick="addLobby('\${id}')">Add Lobby</button>
             </div>
             <div>\${Object.entries(lobbies).map(([cid, lobby]) => \`
@@ -712,6 +713,10 @@ app.get("/", (req, res) => {
                 <div>
                   <label>bitrate_kbps</label>
                   <input id="br-\${cid}" type="number" min="8" max="512" value="\${lobby.bitrateKbps ?? ""}" />
+                </div>
+                <div>
+                  <label>max_channels</label>
+                  <input id="mc-\${cid}" type="number" min="0" max="99" value="\${lobby.maxChannels ?? ""}" placeholder="0 = unlimited" />
                 </div>
                 <button onclick="saveLobby('\${id}','\${cid}')">Save Lobby</button>
                 <button onclick="toggleLobby('\${id}','\${cid}', ${!lobby.enabled})">\${lobby.enabled ? "Disable" : "Enable"}</button>
@@ -1071,7 +1076,13 @@ app.get("/", (req, res) => {
         const userLimit = Number(document.getElementById("ul-" + channelId).value);
         const bitrateKbpsRaw = document.getElementById("br-" + channelId).value;
         const bitrateKbps = bitrateKbpsRaw ? Number(bitrateKbpsRaw) : null;
-        await postJson("/api/guild/" + guildId + "/voice/lobby/" + channelId, { userLimit, bitrateKbps });
+        const maxChannelsRaw = document.getElementById("mc-" + channelId).value;
+        const maxChannels = maxChannelsRaw === "" ? null : Number(maxChannelsRaw);
+        await postJson("/api/guild/" + guildId + "/voice/lobby/" + channelId, {
+          userLimit,
+          bitrateKbps,
+          maxChannels
+        });
         alert("Saved");
       }
 
@@ -1082,7 +1093,16 @@ app.get("/", (req, res) => {
         const userLimit = Number(document.getElementById("new-ul").value);
         const bitrateKbpsRaw = document.getElementById("new-br").value;
         const bitrateKbps = bitrateKbpsRaw ? Number(bitrateKbpsRaw) : null;
-        await postJson("/api/guild/" + guildId + "/voice/lobby/add", { channelId, categoryId, template, userLimit, bitrateKbps });
+        const maxChannelsRaw = document.getElementById("new-mc").value;
+        const maxChannels = maxChannelsRaw === "" ? null : Number(maxChannelsRaw);
+        await postJson("/api/guild/" + guildId + "/voice/lobby/add", {
+          channelId,
+          categoryId,
+          template,
+          userLimit,
+          bitrateKbps,
+          maxChannels
+        });
         alert("Added");
       }
 
@@ -1948,7 +1968,7 @@ app.post("/api/guild/:id/voice/lobby/:channelId", requireAuth, rateLimitDashboar
 
 app.post("/api/guild/:id/voice/lobby/add", requireAuth, rateLimitDashboard, requireCsrf, async (req, res) => {
   const guildId = String(req.params.id || "");
-  const { channelId, categoryId, template, userLimit, bitrateKbps } = req.body ?? {};
+  const { channelId, categoryId, template, userLimit, bitrateKbps, maxChannels } = req.body ?? {};
   if (!guildId || !isSnowflake(guildId) || !isSnowflake(String(channelId || "")) || !isSnowflake(String(categoryId || ""))) {
     res.status(400).json({ ok: false, error: "bad-request" });
     return;
@@ -1973,13 +1993,14 @@ app.post("/api/guild/:id/voice/lobby/add", requireAuth, rateLimitDashboard, requ
 
   const out = await addLobby(guildId, channelId, categoryId, template || "{user}'s room", {
     userLimit,
-    bitrateKbps
+    bitrateKbps,
+    maxChannels
   });
   await auditLog({
     guildId,
     userId: req.session?.userId ?? "unknown",
     action: "voice.lobby.add",
-    details: { channelId, categoryId, userLimit, bitrateKbps, source: "dashboard" }
+    details: { channelId, categoryId, userLimit, bitrateKbps, maxChannels, source: "dashboard" }
   });
   res.json({ ok: true, ...out });
 });

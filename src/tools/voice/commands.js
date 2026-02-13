@@ -39,13 +39,24 @@ function buildEmbed(title, description) {
   return new EmbedBuilder().setTitle(title).setDescription(description ?? "");
 }
 
-function formatLobbyLine(lobby, channelLabel, tempCount) {
+function buildErrorEmbed(message) {
+  return buildEmbed("Voice error", message);
+}
+
+function lobbySummary(lobby, tempCount) {
   const enabled = lobby.enabled ? "enabled" : "disabled";
   const limit = Number.isFinite(lobby.userLimit) ? lobby.userLimit : 0;
   const bitrate = Number.isFinite(lobby.bitrateKbps) ? `${lobby.bitrateKbps}kbps` : "auto";
-  const maxChannels = Number.isFinite(lobby.maxChannels) ? lobby.maxChannels : "∞";
+  const maxChannels = Number.isFinite(lobby.maxChannels) ? lobby.maxChannels : "unlimited";
   const categoryLabel = lobby.categoryId ? `<#${lobby.categoryId}>` : "n/a";
-  return `${channelLabel} · ${enabled} · temp ${tempCount} · limit ${limit} · bitrate ${bitrate} · max ${maxChannels} · category ${categoryLabel}`;
+  return [
+    `state: ${enabled}`,
+    `temp: ${tempCount}`,
+    `limit: ${limit}`,
+    `bitrate: ${bitrate}`,
+    `max: ${maxChannels}`,
+    `category: ${categoryLabel}`
+  ].join("\n");
 }
 
 async function getRoomContext(interaction) {
@@ -309,7 +320,7 @@ export async function execute(interaction) {
 
   if (adminSubs.has(sub) && !hasAdmin(interaction)) {
     await interaction.reply({
-      content: "Manage Server permission required for this command.",
+      embeds: [buildErrorEmbed("Manage Server permission required for this command.")],
       ephemeral: true
     });
     return;
@@ -322,7 +333,7 @@ export async function execute(interaction) {
       const perms = category.permissionsFor(me);
       if (!perms?.has(PermissionFlagsBits.ManageChannels) || !perms?.has(PermissionFlagsBits.MoveMembers)) {
         await interaction.reply({
-          content: "Missing permissions in that category (Manage Channels + Move Members required).",
+          embeds: [buildErrorEmbed("Missing permissions in that category (Manage Channels + Move Members required).")],
           ephemeral: true
         });
         return;
@@ -481,9 +492,11 @@ export async function execute(interaction) {
     });
     if (!res.ok) {
       await interaction.reply({
-        content: res.error === "invalid-max-channels"
-          ? "max_channels must be 1 or higher."
-          : "Unable to update lobby.",
+        embeds: [buildErrorEmbed(
+          res.error === "invalid-max-channels"
+            ? "max_channels must be 1 or higher."
+            : "Unable to update lobby."
+        )],
         ephemeral: true
       });
       return;
@@ -499,21 +512,27 @@ export async function execute(interaction) {
     if (!entries.length) {
       const embed = buildEmbed(
         "Voice status",
-        "No lobbies configured. Use /voice add to register a lobby."
+        "No lobbies configured. Use /voice add or /voice setup to register a lobby."
       );
       await interaction.reply({ embeds: [embed], ephemeral: true });
       return;
     }
     const tempChannels = Object.values(res.tempChannels ?? {});
-    const lines = entries.map(([channelId, lobby]) => {
-      const channelLabel = `<#${channelId}>`;
+    const embed = buildEmbed("Voice status");
+    const maxFields = 20;
+    entries.slice(0, maxFields).forEach(([channelId, lobby]) => {
       const tempCount = tempChannels.filter(temp => temp.lobbyId === channelId).length;
-      return formatLobbyLine(lobby, channelLabel, tempCount);
+      embed.addFields({
+        name: `<#${channelId}>`,
+        value: lobbySummary(lobby, tempCount)
+      });
     });
-    const maxLines = 15;
-    const visible = lines.slice(0, maxLines);
-    const remaining = lines.length > maxLines ? `\n...and ${lines.length - maxLines} more` : "";
-    const embed = buildEmbed("Voice status", visible.join("\n") + remaining);
+    if (entries.length > maxFields) {
+      embed.addFields({
+        name: "More",
+        value: `Additional lobbies: ${entries.length - maxFields}`
+      });
+    }
     await interaction.reply({ embeds: [embed], ephemeral: true });
     return;
   }
@@ -534,7 +553,7 @@ export async function execute(interaction) {
   if (roomSubs.has(sub)) {
     const ctx = await getRoomContext(interaction);
     if (!ctx.ok) {
-      await interaction.reply({ content: roomErrorMessage(ctx.error), ephemeral: true });
+      await interaction.reply({ embeds: [buildErrorEmbed(roomErrorMessage(ctx.error))], ephemeral: true });
       return;
     }
     const { channel } = ctx;
@@ -571,7 +590,7 @@ export async function execute(interaction) {
 
     if (sub === "room_lock") {
       if (!everyoneId) {
-        await interaction.reply({ content: "Unable to resolve @everyone role.", ephemeral: true });
+        await interaction.reply({ embeds: [buildErrorEmbed("Unable to resolve @everyone role.")], ephemeral: true });
         return;
       }
       await channel.permissionOverwrites.edit(everyoneId, { Connect: false });
@@ -582,7 +601,7 @@ export async function execute(interaction) {
 
     if (sub === "room_unlock") {
       if (!everyoneId) {
-        await interaction.reply({ content: "Unable to resolve @everyone role.", ephemeral: true });
+        await interaction.reply({ embeds: [buildErrorEmbed("Unable to resolve @everyone role.")], ephemeral: true });
         return;
       }
       if (channel.permissionOverwrites.cache.has(everyoneId)) {

@@ -2,7 +2,24 @@
 import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
 import { fetchAgentBots, fetchAgentRunners, updateAgentBotStatus } from "../utils/storage.js";
-import { logger } from "../utils/logger.js";
+import { logger, createAgentScopedLogger, generateCorrelationId } from "../utils/logger.js";
+import {
+  trackAgentRegistration,
+  trackAgentRestart,
+  trackAgentDisconnect,
+  updateAgentGauges,
+  trackSessionAllocation,
+  trackSessionRelease,
+  updateSessionGauges
+} from "../utils/metrics.js";
+import CircuitBreaker from "opossum";
+
+// Protocol version - must match agent version
+const PROTOCOL_VERSION = "1.0.0";
+const SUPPORTED_VERSIONS = new Set(["1.0.0"]); // Add older versions here for compatibility
+
+// Agent limits per guild (Level 1: Invariants Locked)
+const MAX_AGENTS_PER_GUILD = 49;
 
 function sessionKey(guildId, voiceChannelId) {
   return `${guildId}:${voiceChannelId}`;
@@ -65,6 +82,15 @@ export class AgentManager {
     // Invite perms for agents (connect/speak/read history)
     // Conservative by default. Override with AGENT_INVITE_PERMS if you want.
     this.invitePerms = BigInt(process.env.AGENT_INVITE_PERMS || "3147776");
+
+    // Circuit breaker for agent requests
+    this.circuitBreaker = new CircuitBreaker(this._performRequest.bind(this), {
+      timeout: 20000, // If our function takes longer than 20s, trigger a failure
+      errorThresholdPercentage: 50, // When 50% of requests fail, open the circuit
+      resetTimeout: 30000, // After 30s, try again
+      rollingCountTimeout: 10000, // Check the last 10s for failures
+      rollingCountBuckets: 10
+    });
   }
 
   async start() {
@@ -103,17 +129,24 @@ export class AgentManager {
   handleConnection(ws) {
     // When an agent connects, it will send a "hello" message containing its agentId
     ws.on("message", data => this.handleMessage(ws, data));
-    ws.on("close", () => this.handleClose(ws));
+    ws.on("close", () => {
+      // Make async cleanup non-blocking
+      this.handleClose(ws).catch(err => {
+        logger.error(`[AgentManager] Error in handleClose: ${err?.message}`);
+      });
+    });
     ws.on("error", (err) => {
       logger.error(`[AgentManager] Agent WS error:`, { error: err?.message ?? err });
     });
   }
 
-  handleClose(ws) {
+  async handleClose(ws) {
     const agentId = ws.__agentId;
     if (!agentId) return; // Unknown connection
 
-    this._cleanupAgentOnDisconnect(agentId);
+    logger.info('Agent WebSocket closed', { agentId });
+    trackAgentDisconnect('unknown'); // We don't have close code here
+    await this._cleanupAgentOnDisconnect(agentId);
   }
 
   handleMessage(ws, data) {
@@ -137,17 +170,53 @@ export class AgentManager {
     const agentId = String(msg?.agentId ?? "").trim();
     if (!agentId) return;
 
-    console.log(`[HANDSHAKE] Received HELLO from agent ${agentId}`);
+    const agentLogger = createAgentScopedLogger(agentId);
+    agentLogger.info('Agent handshake received', {
+      protocolVersion: msg?.protocolVersion,
+      ready: msg?.ready,
+      guildCount: msg?.guildIds?.length || 0
+    });
+
+    // Validate protocol version
+    const agentVersion = msg?.protocolVersion;
+    if (!agentVersion) {
+      agentLogger.warn('Agent missing protocol version, rejecting');
+      trackAgentRegistration('rejected');
+      ws.send(JSON.stringify({
+        type: "error",
+        error: "Protocol version required. Please upgrade agent."
+      }));
+      ws.close(1008, "Missing protocol version");
+      return;
+    }
+
+    if (!SUPPORTED_VERSIONS.has(agentVersion)) {
+      agentLogger.warn('Agent has incompatible protocol version', {
+        agentVersion,
+        expectedVersion: PROTOCOL_VERSION
+      });
+      trackAgentRegistration('rejected');
+      ws.send(JSON.stringify({
+        type: "error",
+        error: `Incompatible protocol version ${agentVersion}. Controller expects ${PROTOCOL_VERSION}.`
+      }));
+      ws.close(1008, "Incompatible protocol version");
+      return;
+    }
 
     // Attach agentId to WebSocket for future messages
     ws.__agentId = agentId;
 
     let agent = this.liveAgents.get(agentId);
+    const isReconnect = !!agent;
+    
     if (!agent) {
-      console.log(`[HANDSHAKE] Registering new agent ${agentId} in liveAgents`);
+      agentLogger.info('Registering new agent');
+      trackAgentRegistration('success');
       agent = {
         agentId,
         ws,
+        protocolVersion: agentVersion,
         ready: false,
         busyKey: null,
         busyKind: null,
@@ -164,13 +233,16 @@ export class AgentManager {
       };
       this.liveAgents.set(agentId, agent);
     } else {
-      console.log(`[HANDSHAKE] Reconnecting agent ${agentId}, updating WebSocket`);
+      agentLogger.info('Agent reconnecting');
+      trackAgentRestart();
       // If agent reconnected, update its WebSocket
       if (agent.ws !== ws) {
         // Optionally terminate old WS if it's still alive to ensure clean state
         try { agent.ws.terminate(); } catch {}
         agent.ws = ws;
       }
+      // Update protocol version in case agent upgraded
+      agent.protocolVersion = agentVersion;
     }
 
     // Update common runtime properties
@@ -180,6 +252,9 @@ export class AgentManager {
     agent.tag = msg?.tag ?? agent.tag;
     agent.startedAt = agent.startedAt ?? now();
     agent.lastSeen = now();
+    
+    // Update metrics
+    this._updateMetrics();
   }
 
   handleGuilds(ws, msg) { // Now directly from an agent
@@ -403,6 +478,19 @@ export class AgentManager {
   async buildDeployPlan(guildId, desiredCount, poolId = null) {
     const desired = Math.max(0, Number(desiredCount || 0) || 0);
 
+    // Enforce 49-agent per guild limit (Level 1: Invariants Locked)
+    if (desired > MAX_AGENTS_PER_GUILD) {
+      return {
+        guildId,
+        desired,
+        presentCount: 0,
+        invitableCount: 0,
+        needInvites: 0,
+        invites: [],
+        error: `Agent limit exceeded. Maximum ${MAX_AGENTS_PER_GUILD} agents per guild.`
+      };
+    }
+
     const present = [];
     for (const agent of this.liveAgents.values()) { // Iterate liveAgents
       if (agent.guildIds?.has?.(guildId)) present.push(agent);
@@ -493,20 +581,37 @@ export class AgentManager {
         agent.voiceChannelId = null;
         agent.textChannelId = null;
         agent.ownerUserId = null;
+        
+        logger.debug('Session released', { agentId, guildId, voiceChannelId });
+        trackSessionRelease('music');
       }
     }
     this.sessions.delete(key);
+    this._updateMetrics();
   }
 
   async ensureSessionAgent(guildId, voiceChannelId, { textChannelId, ownerUserId } = {}) {
+    const startTime = Date.now();
+    const sessionLogger = logger.child({ guildId, voiceChannelId });
+    
     // 1. Check for existing active session agent
     const existing = this.getSessionAgent(guildId, voiceChannelId);
-    if (existing.ok) return existing;
+    if (existing.ok) {
+      sessionLogger.debug('Using existing session agent', { agentId: existing.agent.agentId });
+      return existing;
+    }
 
     // 2. Check for preferred agent (must be active)
     const preferred = this.getPreferredAgent(guildId, voiceChannelId);
     if (preferred && !preferred.busyKey) {
       this.bindAgentToSession(preferred, { guildId, voiceChannelId, textChannelId, ownerUserId });
+      const duration = Date.now() - startTime;
+      sessionLogger.info('Session allocated to preferred agent', {
+        agentId: preferred.agentId,
+        durationMs: duration
+      });
+      trackSessionAllocation('music', 'success', duration);
+      this._updateMetrics();
       return { ok: true, agent: preferred };
     }
 
@@ -514,14 +619,27 @@ export class AgentManager {
     const idleAgentInGuild = this.findIdleAgentInGuildRoundRobin(guildId);
     if (idleAgentInGuild) {
       this.bindAgentToSession(idleAgentInGuild, { guildId, voiceChannelId, textChannelId, ownerUserId });
+      const duration = Date.now() - startTime;
+      sessionLogger.info('Session allocated to idle agent', {
+        agentId: idleAgentInGuild.agentId,
+        durationMs: duration
+      });
+      trackSessionAllocation('music', 'success', duration);
+      this._updateMetrics();
       return { ok: true, agent: idleAgentInGuild };
     }
 
     // 4. No idle agents in guild - check if we have any agents at all
     const present = this.countPresentInGuild(guildId);
-    if (present === 0) return { ok: false, reason: "no-agents-in-guild" };
+    if (present === 0) {
+      sessionLogger.warn('No agents in guild');
+      trackSessionAllocation('music', 'no_agents');
+      return { ok: false, reason: "no-agents-in-guild" };
+    }
     
     // All agents are busy
+    sessionLogger.warn('All agents busy', { present });
+    trackSessionAllocation('music', 'no_free_agents');
     return { ok: false, reason: "no-free-agents" };
   }
 
@@ -649,20 +767,82 @@ export class AgentManager {
 
   // ===== health =====
 
-  _cleanupAgentOnDisconnect(agentId) {
+  async _cleanupAgentOnDisconnect(agentId) {
     const agent = this.liveAgents.get(agentId);
     if (!agent) return;
 
-    // Release leases held by this agent
+    const affectedSessions = [];
+    
+    // Release music sessions held by this agent
     for (const [k, aId] of this.sessions.entries()) {
-      if (aId === agentId) this.sessions.delete(k);
+      if (aId === agentId) {
+        affectedSessions.push(k);
+        this.sessions.delete(k);
+      }
     }
+    
+    // Release assistant sessions held by this agent
     for (const [k, aId] of this.assistantSessions.entries()) {
       if (aId === agentId) this.assistantSessions.delete(k);
     }
 
     this.liveAgents.delete(agentId);
-    logger.info(`[AgentManager] Cleaned up disconnected agent ${agentId}.`);
+    logger.info(`[AgentManager] Cleaned up disconnected agent ${agentId}. Affected sessions: ${affectedSessions.length}`);
+    
+    // Notify users in affected voice channels
+    if (affectedSessions.length > 0 && global.client) {
+      for (const sessionKey of affectedSessions) {
+        const [guildId, voiceChannelId] = sessionKey.split(':');
+        
+        try {
+          const guild = await global.client.guilds.fetch(guildId).catch(() => null);
+          if (!guild) continue;
+          
+          const voiceChannel = await guild.channels.fetch(voiceChannelId).catch(() => null);
+          if (!voiceChannel) continue;
+          
+          // Try to find an associated text channel
+          let textChannel = null;
+          if (voiceChannel.parent) {
+            // Look for a text channel in the same category
+            const channels = voiceChannel.parent.children.cache;
+            textChannel = channels.find(c => c.isTextBased() && c.permissionsFor(guild.members.me).has('SendMessages'));
+          }
+          
+          if (!textChannel) {
+            // Fall back to system channel or first available text channel
+            textChannel = guild.systemChannel || 
+                         guild.channels.cache.find(c => c.isTextBased() && c.permissionsFor(guild.members.me).has('SendMessages'));
+          }
+          
+          if (textChannel) {
+            await textChannel.send({
+              content: `⚠️ **Music agent disconnected** from ${voiceChannel.name}\n💡 Music playback has stopped. Use \`/music play\` to resume.`
+            }).catch(err => {
+              logger.warn(`[AgentManager] Failed to notify channel about agent disconnect: ${err?.message}`);
+            });
+          }
+        } catch (err) {
+          logger.warn(`[AgentManager] Error notifying session ${sessionKey}: ${err?.message}`);
+        }
+      }
+    }
+  }
+
+  // Update metrics gauges (Level 2: Observability)
+  _updateMetrics() {
+    const agents = Array.from(this.liveAgents.values());
+    const connected = agents.length;
+    const ready = agents.filter(a => a.ready && !a.busyKey).length;
+    
+    const busyMusic = agents.filter(a => a.busyKey && a.busyKind === 'music').length;
+    const busyAssistant = agents.filter(a => a.busyKey && a.busyKind === 'assistant').length;
+    
+    const musicSessions = this.sessions.size;
+    const assistantSessions = this.assistantSessions.size;
+    
+    updateAgentGauges(connected, ready, { music: busyMusic, assistant: busyAssistant });
+    updateSessionGauges({ music: musicSessions, assistant: assistantSessions });
   }
 
   pruneStaleAgents() {
@@ -689,10 +869,14 @@ export class AgentManager {
   // ===== RPC =====
 
   async request(agent, op, data, timeoutMs = 20_000) {
-    if (!agent?.ws || !agent?.ready) throw new Error("agent-offline"); // Check agent's WS and ready status
+    if (!agent?.ws || !agent?.ready) throw new Error("agent-offline");
 
+    return await this.circuitBreaker.fire(agent, op, data, timeoutMs);
+  }
+
+  async _performRequest(agent, op, data, timeoutMs) {
     const id = randomUUID();
-    const payload = { type: "req", id, op, data, agentId: agent.agentId }; // Include agentId in payload
+    const payload = { type: "req", id, op, data, agentId: agent.agentId };
     agent.lastActive = now();
 
     const response = new Promise((resolve, reject) => {
@@ -705,7 +889,7 @@ export class AgentManager {
     });
 
     try {
-      agent.ws.send(JSON.stringify(payload)); // Send via agent's WebSocket
+      agent.ws.send(JSON.stringify(payload));
     } catch {
       const pending = this.pending.get(id);
       if (pending) {
@@ -752,9 +936,9 @@ export class AgentManager {
 
 // Enhanced logging for debugging
 const originalRequest = AgentManager.prototype.request;
-AgentManager.prototype.request = function(agent, op, data) {
-  console.log(`[AgentManager] RPC request: ${op} to agent ${agent.agentId}`);
-  return originalRequest.call(this, agent, op, data).catch(err => {
+AgentManager.prototype.request = function(agent, op, data, timeoutMs) {
+  console.log(`[AgentManager] RPC request: ${op} to agent ${agent?.agentId ?? "unknown"}`);
+  return originalRequest.call(this, agent, op, data, timeoutMs).catch(err => {
     console.error(`[AgentManager] RPC failed: ${op}`, err.message);
     throw err;
   });

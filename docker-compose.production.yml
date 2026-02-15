@@ -351,6 +351,50 @@ services:
         max-size: "5m"
         max-file: "2"
 
+  # Adminer DB UI (Optional Ops Tool)
+  adminer:
+    image: adminer:4
+    container_name: chopsticks-adminer
+    restart: unless-stopped
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    ports:
+      - "8081:8080"
+    networks:
+      - chopsticks
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 128m
+    cpus: '0.20'
+    profiles: ["ops"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # RedisInsight UI (Optional Ops Tool)
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: chopsticks-redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    networks:
+      - chopsticks
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: '0.30'
+    profiles: ["ops"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
 volumes:
   postgres_data:
     driver: local

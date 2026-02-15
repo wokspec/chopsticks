@@ -3,12 +3,12 @@ import { strict as assert } from 'assert';
 import { data as helpCommand } from '../../src/commands/help.js';
 
 describe('Help command definition', function () {
-  it('supports command query and all listing options', function () {
+  it('supports single query dropdown with autocomplete', function () {
     const json = helpCommand.toJSON();
     const optionMap = new Map((json.options || []).map(o => [o.name, o]));
 
-    assert.ok(optionMap.has('command'));
-    assert.ok(optionMap.has('all'));
-    assert.equal(optionMap.get('command').autocomplete, true);
+    assert.ok(optionMap.has('query'));
+    assert.equal(optionMap.get('query').autocomplete, true);
+    assert.equal(optionMap.size, 1);
   });
 });

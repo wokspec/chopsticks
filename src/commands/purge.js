@@ -6,7 +6,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder
 } from "discord.js";
-import { buildModEmbed, replyModEmbed, replyModError } from "../moderation/output.js";
+import { buildModEmbed, replyModEmbed, replyModError, sanitizeText } from "../moderation/output.js";
 
 const PURGE_UI_PREFIX = "purgeui";
 const PURGE_TTL_MS = 10 * 60_000;
@@ -41,12 +41,6 @@ function parseUiId(customId) {
   };
 }
 
-function safeText(value, max = 120) {
-  const s = String(value || "").trim();
-  if (s.length <= max) return s;
-  return `${s.slice(0, Math.max(0, max - 3))}...`;
-}
-
 function hasLink(content) {
   return /(https?:\/\/|discord\.gg\/|www\.)/i.test(String(content || ""));
 }
@@ -54,7 +48,7 @@ function hasLink(content) {
 function normalizeFilters(interaction) {
   const count = Math.max(1, Math.min(MAX_PURGE_COUNT, interaction.options.getInteger("count", true)));
   const user = interaction.options.getUser("user");
-  const contains = safeText(interaction.options.getString("contains") || "", 120);
+  const contains = sanitizeText(interaction.options.getString("contains") || "", 120);
   const hasLinks = interaction.options.getBoolean("has_links");
   const hasAttachments = interaction.options.getBoolean("has_attachments");
   const botsOnly = interaction.options.getBoolean("bots_only");
@@ -170,6 +164,10 @@ async function deleteMessages(channel, messages) {
   return { deleted, failed, younger: younger.length, older: older.length };
 }
 
+function buildStatusEmbed(title, summary, requestedBy) {
+  return buildModEmbed({ title, summary, actor: requestedBy });
+}
+
 function buildPreviewEmbed({ filters, scanned, matched, younger, older, requestedBy }) {
   return buildModEmbed({
     title: "Purge Preview",
@@ -204,27 +202,15 @@ function buildResultEmbed({ filters, scanned, matched, result, requestedBy }) {
 }
 
 function buildCanceledEmbed(requestedBy) {
-  return buildModEmbed({
-    title: "Purge Canceled",
-    summary: "No messages were deleted.",
-    actor: requestedBy
-  });
+  return buildStatusEmbed("Purge Canceled", "No messages were deleted.", requestedBy);
 }
 
 function buildExpiredEmbed(requestedBy) {
-  return buildModEmbed({
-    title: "Purge Request Expired",
-    summary: "The preview expired. Run `/purge` again.",
-    actor: requestedBy
-  });
+  return buildStatusEmbed("Purge Request Expired", "The preview expired. Run `/purge` again.", requestedBy);
 }
 
 function buildProcessingEmbed(requestedBy) {
-  return buildModEmbed({
-    title: "Purge In Progress",
-    summary: "Deleting matched messages...",
-    actor: requestedBy
-  });
+  return buildStatusEmbed("Purge In Progress", "Deleting matched messages...", requestedBy);
 }
 
 function previewComponents(requesterId, token) {

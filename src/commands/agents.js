@@ -27,6 +27,7 @@ import {
 } from "../utils/storage.js";
 import { replyEmbed, replyEmbedWithJson, buildEmbed } from "../utils/discordOutput.js";
 import { getBotOwnerIds, isBotOwner } from "../utils/owners.js";
+import { replyInteraction } from "../utils/interactionReply.js";
 
 export const meta = {
   guildOnly: true,
@@ -209,7 +210,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction) {
   const mgr = global.agentManager;
   if (!mgr) {
-    await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Agent control not started." });
+    await replyInteraction(interaction, { content: "Agent control not started." });
     return;
   }
 
@@ -229,10 +230,7 @@ export async function execute(interaction) {
   ]);
 
   if (ownerOnlySubcommands.has(sub) && !requesterIsBotOwner) {
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content: "This command is restricted to the Bot Owner."
-    });
+    await replyInteraction(interaction, { content: "This command is restricted to the Bot Owner." });
     return;
   }
   // -----------------------------
@@ -301,10 +299,10 @@ export async function execute(interaction) {
         embed.addFields({ name: "Invitable Agents", value: invitableText.slice(0, 1024) });
       }
 
-      await interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [embed] });
+      await replyInteraction(interaction, { embeds: [embed] });
     } catch (error) {
       console.error(`[agents:status] Error: ${error.message}`);
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Failed to fetch agent status: ${error.message}` });
+      await replyInteraction(interaction, { content: `Failed to fetch agent status: ${error.message}` });
     }
     return;
   }
@@ -332,13 +330,10 @@ export async function execute(interaction) {
 
       embed.setDescription(descriptionLines.join("\n\n").slice(0, 4096));
 
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral,
-        embeds: [embed]
-      });
+      await replyInteraction(interaction, { embeds: [embed] });
     } catch (error) {
       console.error(`[agents:manifest] Error: ${error.message}`);
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Failed to fetch agent manifest: ${error.message}` });
+      await replyInteraction(interaction, { content: `Failed to fetch agent manifest: ${error.message}` });
     }
     return;
   }
@@ -349,8 +344,7 @@ export async function execute(interaction) {
       const fromPoolOption = interaction.options.getString("from_pool", false);
 
       if (desiredTotal % 10 !== 0) {
-        await interaction.reply({
-          flags: MessageFlags.Ephemeral,
+        await replyInteraction(interaction, {
           content: `The desired total number of agents must be a multiple of 10. You entered ${desiredTotal}.`
         });
         return;
@@ -447,7 +441,7 @@ export async function execute(interaction) {
       if (interaction.deferred) {
         await interaction.editReply({ content });
       } else {
-        await interaction.reply({ flags: MessageFlags.Ephemeral, content });
+        await replyInteraction(interaction, { content });
       }
     }
     return;
@@ -461,8 +455,7 @@ export async function execute(interaction) {
       const configured = (minutes !== null ? 1 : 0) + (useDefault ? 1 : 0) + (disable ? 1 : 0);
 
       if (configured > 1) {
-        await interaction.reply({
-          flags: MessageFlags.Ephemeral,
+        await replyInteraction(interaction, {
           content: "Use only one option: `minutes`, `use_default`, or `disable`."
         });
         return;
@@ -518,16 +511,10 @@ export async function execute(interaction) {
       lines.push("");
       lines.push("Use `/agents idle_policy minutes:<1-720>` to set, `disable:true` to disable, or `use_default:true` to clear override.");
 
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral,
-        content: lines.join("\n")
-      });
+      await replyInteraction(interaction, { content: lines.join("\n") });
     } catch (error) {
       console.error(`[agents:idle_policy] Error: ${error.message}`);
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral,
-        content: `Failed to update idle policy: ${error.message}`
-      });
+      await replyInteraction(interaction, { content: `Failed to update idle policy: ${error.message}` });
     }
     return;
   }
@@ -535,8 +522,7 @@ export async function execute(interaction) {
   if (sub === "verify_membership") {
     // Check admin permissions
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral,
+      await replyInteraction(interaction, {
         content: "Only server administrators can verify agent membership."
       });
       return;
@@ -623,13 +609,12 @@ export async function execute(interaction) {
         .map(s => `assistant ${s.voiceChannelId} -> ${s.agentId}`);
 
       const lines = [...sessions, ...assistantSessions];
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral,
+      await replyInteraction(interaction, {
         content: lines.length ? lines.join("\n") : "No sessions for this guild."
       });
     } catch (error) {
       console.error(`[agents:sessions] Error: ${error.message}`);
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Failed to fetch sessions: ${error.message}` });
+      await replyInteraction(interaction, { content: `Failed to fetch sessions: ${error.message}` });
     }
     return;
   }
@@ -641,7 +626,7 @@ export async function execute(interaction) {
       const kind = interaction.options.getString("kind") || "music";
       const agent = mgr.agents.get(agentId);
       if (!agent?.ready || !agent.ws) {
-        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Agent not ready." });
+        await replyInteraction(interaction, { content: "Agent not ready." });
         return;
       }
       if (kind === "assistant") {
@@ -649,10 +634,10 @@ export async function execute(interaction) {
       } else {
         mgr.setPreferredAgent(guildId, channel.id, agentId, 300_000);
       }
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Pinned ${agentId} to ${channel.id} (${kind}).` });
+      await replyInteraction(interaction, { content: `Pinned ${agentId} to ${channel.id} (${kind}).` });
     } catch (error) {
       console.error(`[agents:assign] Error: ${error.message}`);
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Failed to assign agent: ${error.message}` });
+      await replyInteraction(interaction, { content: `Failed to assign agent: ${error.message}` });
     }
     return;
   }
@@ -688,10 +673,10 @@ export async function execute(interaction) {
         }
       }
 
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Released ${kind} session for ${channel.id}.` });
+      await replyInteraction(interaction, { content: `Released ${kind} session for ${channel.id}.` });
     } catch (error) {
       console.error(`[agents:release] Error: ${error.message}`);
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Failed to release session: ${error.message}` });
+      await replyInteraction(interaction, { content: `Failed to release session: ${error.message}` });
     }
     return;
   }
@@ -700,23 +685,22 @@ export async function execute(interaction) {
     const count = interaction.options.getInteger("count", true);
     const scaleToken = String(process.env.AGENT_SCALE_TOKEN || "").trim();
     if (!scaleToken) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "AGENT_SCALE_TOKEN not configured." });
+      await replyInteraction(interaction, { content: "AGENT_SCALE_TOKEN not configured." });
       return;
     }
     const any = mgr.listAgents().find(a => a.ready);
     if (!any) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "No ready agent available." });
+      await replyInteraction(interaction, { content: "No ready agent available." });
       return;
     }
     const agentObj = mgr.agents.get(any.agentId);
     try {
       const res = await mgr.request(agentObj, "scale", { desiredActive: count, scaleToken });
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral,
+      await replyInteraction(interaction, {
         content: `Scale result: ${res?.action ?? "ok"} (active: ${res?.active ?? "?"})`
       });
     } catch (err) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Scale failed: ${err?.message ?? err}` });
+      await replyInteraction(interaction, { content: `Scale failed: ${err?.message ?? err}` });
     }
     return;
   }
@@ -726,10 +710,12 @@ export async function execute(interaction) {
     // Use the new updateAgentBotStatus to set status to 'restarting'
     try {
       await mgr.updateAgentBotStatus(agentId, 'restarting');
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Agent ${agentId} marked for restart. AgentRunner will handle reconnection.` });
+      await replyInteraction(interaction, {
+        content: `Agent ${agentId} marked for restart. AgentRunner will handle reconnection.`
+      });
     } catch (error) {
       console.error(`Error marking agent ${agentId} for restart: ${error}`);
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Failed to mark agent for restart: ${error.message}` });
+      await replyInteraction(interaction, { content: `Failed to mark agent for restart: ${error.message}` });
     }
     return;
   }
@@ -999,13 +985,13 @@ export async function execute(interaction) {
     try {
       const updated = await updateAgentBotStatus(agentId, status); // Await boolean return
       if (updated) {
-        await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Agent ${agentId} status updated to ${status}.` });
+        await replyInteraction(interaction, { content: `Agent ${agentId} status updated to ${status}.` });
       } else {
-        await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Agent ${agentId} not found.` });
+        await replyInteraction(interaction, { content: `Agent ${agentId} not found.` });
       }
     } catch (error) {
       console.error(`Error updating agent token status: ${error}`);
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Failed to update agent token status: ${error.message}` });
+      await replyInteraction(interaction, { content: `Failed to update agent token status: ${error.message}` });
     }
     return;
   }
@@ -1018,7 +1004,7 @@ export async function execute(interaction) {
       const agentToDelete = allAgents.find(a => a.agent_id === agentId);
 
       if (!agentToDelete) {
-        await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Agent token ${agentId} not found.` });
+        await replyInteraction(interaction, { content: `Agent token ${agentId} not found.` });
         return;
       }
 

@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
 import { canModerateTarget, fetchTargetMember, moderationGuardMessage } from "../moderation/guards.js";
-import { reasonOrDefault, replyModError, replyModSuccess } from "../moderation/output.js";
+import { notifyUserByDm, reasonOrDefault, replyModError, replyModSuccess } from "../moderation/output.js";
 
 export const meta = {
   guildOnly: true,
@@ -39,12 +39,11 @@ export async function execute(interaction) {
     return;
   }
 
-  let dmStatus = "not-requested";
-  if (notifyUser) {
-    dmStatus = await user.send(`You were kicked from **${interaction.guild?.name || "this server"}**.\nReason: ${reason}`)
-      .then(() => "sent")
-      .catch(() => "failed");
-  }
+  const dmStatus = await notifyUserByDm(
+    user,
+    `You were kicked from **${interaction.guild?.name || "this server"}**.\nReason: ${reason}`,
+    { enabled: notifyUser }
+  );
 
   try {
     await member.kick(reason);

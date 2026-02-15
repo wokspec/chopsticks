@@ -8,13 +8,14 @@ Chopsticks is a Docker-first, self-hosted Discord bot platform with:
 - optional dashboard + monitoring stack
 - optional ops cockpit (live container logs)
 
-## Platform Snapshot (2026-02-14)
+## Platform Snapshot (2026-02-15)
 
 - Maturity baseline: Levels 0-2 hardening in progress/completed artifacts are in-repo
 - Agent protocol version: `1.0.0`
 - Max agents per guild: `49` (enforced)
 - Contract/unit tests: `90 passing`
 - Primary runtime target: Docker Compose production stack
+- Moderation suite: hardened embed outputs + guardrails + interactive purge
 
 See `SYSTEM_STATUS.md`, `MATURITY.md`, `LEVEL_1_COMPLETION_REPORT.md`, and `LEVEL_2_COMPLETION_REPORT.md` for detailed status.
 
@@ -104,6 +105,15 @@ Voice lobby system supports:
 - `/commands ui` opens an interactive command center with category and command dropdowns.
 - `/fun play`, `/fun random`, and `/fun catalog` provide a 220-variant fun system (also available as prefix `!fun`).
 - `/fun settings` controls auto output mode and feature routing in your guild (`mode: off|clean|creative`, plus `welcome|giveaway|daily|work`).
+
+## Moderation Hardening
+
+The moderation command surface is hardened and standardized:
+- Professional embed outputs for moderation commands
+- Target safety guardrails (self/owner/admin/hierarchy/bot checks)
+- `/purge` preview + confirmation buttons + dry-run mode
+- Filtered purge options (`user`, `contains`, `links`, `attachments`, `bots_only`, `include_pinned`)
+- Purge supports mixed-age delete strategy (bulk for recent messages, manual fallback for older messages)
 
 ## FunHub API
 

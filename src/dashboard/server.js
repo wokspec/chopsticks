@@ -24,6 +24,7 @@ import { getUserPets, createPet, deletePet, listPools, fetchPoolsByOwner, create
 import { applySecurityMiddleware, requireAdmin as modernRequireAdmin, auditLog as modernAudit } from "./securityMiddleware.js";
 import { dashboardLogger } from "../utils/modernLogger.js";
 import { metricsHandler, healthHandler } from "../utils/metrics.js";
+import { getFunCatalog, randomFunFromRuntime, renderFunFromRuntime, resolveVariantId } from "../fun/runtime.js";
 import Joi from "joi";
 
 const app = express();
@@ -488,7 +489,7 @@ app.get("/", (req, res) => {
       <div class="muted">Self-hosted control panel</div>
     </header>
     <main>
-      ${authed ? `<a class="button" href="/logout">Logout</a>` : `<a class="button" href="${loginUrl}">Login with Discord</a>`}
+      ${authed ? `<a class="button" href="/logout">Logout</a> <a class="button" href="/fun">Fun Generator</a>` : `<a class="button" href="${loginUrl}">Login with Discord</a>`}
       <div id="app"></div>
     </main>
     <script>
@@ -1670,6 +1671,228 @@ app.get("/api/me", requireAuth, rateLimitDashboard, async (req, res) => {
     myPools,
     publicPools
   });
+});
+
+app.get("/fun", requireAuth, rateLimitDashboard, (req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.end(`<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Chopsticks Fun Generator</title>
+    <style>
+      body { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: radial-gradient(circle at top right, #14213d, #0b0f1a 60%); color: #e6e6e6; }
+      main { max-width: 1080px; margin: 0 auto; padding: 24px; }
+      .bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+      .btn { display: inline-block; text-decoration: none; color: #e6e6e6; border: 1px solid #344055; border-radius: 8px; padding: 8px 12px; background: #111827; }
+      .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+      .card { border: 1px solid #2a2f3a; border-radius: 12px; background: rgba(17,24,39,.92); padding: 14px; }
+      label { display: block; color: #9ca3af; font-size: 12px; margin-bottom: 5px; }
+      input, select, button { width: 100%; box-sizing: border-box; background: #0b0f1a; color: #e6e6e6; border: 1px solid #344055; border-radius: 8px; padding: 9px; }
+      button { cursor: pointer; font-weight: 700; }
+      .row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+      pre { background: #09101d; border: 1px solid #243145; border-radius: 8px; padding: 12px; white-space: pre-wrap; word-break: break-word; min-height: 140px; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 6px 0; border-bottom: 1px dashed #243145; vertical-align: top; }
+      .mono { font-family: ui-monospace, Menlo, monospace; color: #86efac; }
+      .muted { color: #9ca3af; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="bar">
+        <a class="btn" href="/">Dashboard</a>
+        <a class="btn" href="/logout">Logout</a>
+      </div>
+      <h2>Fun Generator</h2>
+      <div class="muted">One content engine across Discord, web, and game surfaces.</div>
+      <div class="grid" style="margin-top:14px;">
+        <section class="card">
+          <h3>Generate Output</h3>
+          <div class="row">
+            <div>
+              <label>Target</label>
+              <input id="target" placeholder="raid-team" />
+            </div>
+            <div>
+              <label>Intensity (1-5)</label>
+              <select id="intensity">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <label>Variant ID (optional for random)</label>
+            <input id="variant" placeholder="hype-burst" />
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button id="run-random">Random</button>
+            <button id="run-variant">Use Variant</button>
+          </div>
+          <pre id="output">No output yet.</pre>
+        </section>
+        <section class="card">
+          <h3>Catalog Search</h3>
+          <div class="row">
+            <div>
+              <label>Query</label>
+              <input id="query" placeholder="hype" />
+            </div>
+            <div>
+              <label>Limit</label>
+              <select id="limit">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="25">25</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <button id="search">Search Catalog</button>
+          </div>
+          <div id="meta" class="muted" style="margin-top:10px;"></div>
+          <table id="catalog" style="margin-top:8px;"></table>
+        </section>
+      </div>
+    </main>
+    <script>
+      const output = document.getElementById("output");
+      const catalog = document.getElementById("catalog");
+      const meta = document.getElementById("meta");
+
+      async function getJson(url) {
+        const res = await fetch(url);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || data.detail || ("HTTP " + res.status));
+        }
+        return data;
+      }
+
+      function safe(v) {
+        return String(v ?? "").replace(/[&<>"]/g, s => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;" }[s]));
+      }
+
+      function renderOutput(data) {
+        output.textContent =
+          "Source: " + (data.source || "local") + "\\n" +
+          "Variant: " + (data.variantId || data?.variant?.id || "unknown") + "\\n" +
+          "Intensity: " + (data.intensity ?? 3) + "\\n\\n" +
+          String(data.text || "No text returned.");
+      }
+
+      function renderCatalog(data) {
+        const stats = data.stats || {};
+        meta.textContent = "source=" + (data.source || "local") + " | total=" + (stats.total || data.total || 0) + " | themes=" + (stats.themes || "?") + " | styles=" + (stats.styles || "?");
+        const rows = (data.matches || []).map(v => "<tr><td class='mono'>" + safe(v.id) + "</td><td>" + safe(v.label) + "</td></tr>");
+        catalog.innerHTML = rows.length ? rows.join("") : "<tr><td class='muted'>No matches</td><td></td></tr>";
+      }
+
+      async function runRandom() {
+        const target = encodeURIComponent(document.getElementById("target").value.trim());
+        const intensity = encodeURIComponent(document.getElementById("intensity").value);
+        const data = await getJson("/api/fun/random?target=" + target + "&intensity=" + intensity);
+        renderOutput(data);
+      }
+
+      async function runVariant() {
+        const variant = encodeURIComponent(document.getElementById("variant").value.trim());
+        const target = encodeURIComponent(document.getElementById("target").value.trim());
+        const intensity = encodeURIComponent(document.getElementById("intensity").value);
+        if (!variant) {
+          output.textContent = "Variant id required for this action.";
+          return;
+        }
+        const data = await getJson("/api/fun/render?variant=" + variant + "&target=" + target + "&intensity=" + intensity);
+        renderOutput(data);
+      }
+
+      async function searchCatalog() {
+        const q = encodeURIComponent(document.getElementById("query").value.trim());
+        const limit = encodeURIComponent(document.getElementById("limit").value);
+        const data = await getJson("/api/fun/catalog?q=" + q + "&limit=" + limit);
+        renderCatalog(data);
+      }
+
+      document.getElementById("run-random").addEventListener("click", () => runRandom().catch(err => { output.textContent = "Error: " + err.message; }));
+      document.getElementById("run-variant").addEventListener("click", () => runVariant().catch(err => { output.textContent = "Error: " + err.message; }));
+      document.getElementById("search").addEventListener("click", () => searchCatalog().catch(err => { meta.textContent = "Error: " + err.message; }));
+      searchCatalog().catch(() => {});
+    </script>
+  </body>
+</html>`);
+});
+
+app.get("/api/fun/catalog", requireAuth, rateLimitDashboard, async (req, res) => {
+  try {
+    const query = String(req.query.q || "");
+    const limit = Number(req.query.limit || 20);
+    const out = await getFunCatalog({ query, limit });
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: "fun-catalog-failed", detail: err?.message || "unknown" });
+  }
+});
+
+app.get("/api/fun/random", requireAuth, rateLimitDashboard, async (req, res) => {
+  try {
+    const target = String(req.query.target || "").trim() || req.session?.username || "guest";
+    const intensity = Number(req.query.intensity || 3);
+    const out = await randomFunFromRuntime({
+      actorTag: req.session?.username || "dashboard-user",
+      target,
+      intensity
+    });
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: "fun-random-failed", detail: err?.message || "unknown" });
+  }
+});
+
+app.get("/api/fun/render", requireAuth, rateLimitDashboard, async (req, res) => {
+  try {
+    const rawVariant = String(req.query.variant || "");
+    const variantId = resolveVariantId(rawVariant);
+    if (!variantId) {
+      res.status(400).json({ ok: false, error: "bad-variant", detail: "Unknown variant id." });
+      return;
+    }
+    const target = String(req.query.target || "").trim() || req.session?.username || "guest";
+    const intensity = Number(req.query.intensity || 3);
+    const out = await renderFunFromRuntime({
+      variantId,
+      actorTag: req.session?.username || "dashboard-user",
+      target,
+      intensity
+    });
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: "fun-render-failed", detail: err?.message || "unknown" });
+  }
+});
+
+app.get("/api/fun/pack", requireAuth, rateLimitDashboard, async (req, res) => {
+  try {
+    const count = Math.max(1, Math.min(10, Number(req.query.count || 3) || 3));
+    const target = String(req.query.target || "").trim() || req.session?.username || "guest";
+    const intensity = Number(req.query.intensity || 3);
+    const items = [];
+    for (let i = 0; i < count; i += 1) {
+      const out = await randomFunFromRuntime({
+        actorTag: req.session?.username || "dashboard-user",
+        target,
+        intensity
+      });
+      if (out?.ok) items.push(out);
+    }
+    res.json({ ok: true, source: items[0]?.source || "local", count: items.length, items });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: "fun-pack-failed", detail: err?.message || "unknown" });
+  }
 });
 
 app.post("/api/me/pets", requireAuth, rateLimitDashboard, requireCsrf, async (req, res) => {

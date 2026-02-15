@@ -1,7 +1,7 @@
 import { EmbedBuilder, MessageFlags } from "discord.js";
 import { Colors } from "../utils/discordOutput.js";
 
-function sanitize(text, max = 1024) {
+export function sanitizeText(text, max = 1024) {
   const value = String(text ?? "").trim();
   if (value.length <= max) return value;
   if (max <= 3) return value.slice(0, Math.max(0, max));
@@ -17,8 +17,8 @@ export function buildModEmbed({
   footer = "Chopsticks Moderation"
 } = {}) {
   const embed = new EmbedBuilder()
-    .setTitle(sanitize(title || "Moderation"))
-    .setDescription(sanitize(summary || "Action completed."))
+    .setTitle(sanitizeText(title || "Moderation"))
+    .setDescription(sanitizeText(summary || "Action completed."))
     .setColor(color)
     .setTimestamp();
 
@@ -26,15 +26,15 @@ export function buildModEmbed({
   for (const field of Array.isArray(fields) ? fields : []) {
     if (!field || !field.name) continue;
     normalizedFields.push({
-      name: sanitize(field.name, 256),
-      value: sanitize(field.value ?? "-", 1024),
+      name: sanitizeText(field.name, 256),
+      value: sanitizeText(field.value ?? "-", 1024),
       inline: Boolean(field.inline)
     });
   }
   if (normalizedFields.length) embed.addFields(normalizedFields.slice(0, 25));
 
   const footerText = actor ? `${footer} • by ${actor}` : footer;
-  embed.setFooter({ text: sanitize(footerText, 2048) });
+  embed.setFooter({ text: sanitizeText(footerText, 2048) });
   return embed;
 }
 
@@ -87,4 +87,9 @@ export async function replyModError(interaction, {
 export function reasonOrDefault(reason) {
   const text = String(reason || "").trim();
   return text || "No reason provided.";
+}
+
+export async function notifyUserByDm(user, message, { enabled = false } = {}) {
+  if (!enabled) return "not-requested";
+  return user.send(message).then(() => "sent").catch(() => "failed");
 }

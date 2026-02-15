@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  MessageFlags,
   PermissionFlagsBits,
   ChannelType,
   ActionRowBuilder,
@@ -37,6 +36,7 @@ import {
 import { countAssistantSessionsInGuild } from "../assistant/service.js";
 import { auditLog } from "../utils/audit.js";
 import { replyEmbedWithJson, buildEmbed } from "../utils/discordOutput.js";
+import { replyInteraction } from "../utils/interactionReply.js";
 
 export const data = new SlashCommandBuilder()
   .setName("assistant")
@@ -335,7 +335,7 @@ function requireVoice(interaction) {
 }
 
 function makeMsg(title, body) {
-  return { embeds: [{ title, description: body ?? "" }], flags: MessageFlags.Ephemeral };
+  return { embeds: [{ title, description: body ?? "" }] };
 }
 
 function makeListenPrompt(userId) {
@@ -351,8 +351,7 @@ function makeListenPrompt(userId) {
   );
   return {
     content: "Choose listen mode:",
-    components: [row],
-    flags: MessageFlags.Ephemeral
+    components: [row]
   };
 }
 
@@ -399,7 +398,7 @@ async function runListen(interaction, mode) {
           : access.reason === "assistant-channel-not-allowed"
             ? "Assistant is not allowed in this channel."
             : "You don't have access to the assistant.";
-    await interaction.reply(makeMsg("Assistant", msg));
+    await replyInteraction(interaction, makeMsg("Assistant", msg));
     return;
   }
 
@@ -411,7 +410,7 @@ async function runListen(interaction, mode) {
       ownerUserId: userId
     });
     if (!alloc.ok) {
-      await interaction.reply(makeMsg("Assistant", formatAssistantError(alloc.reason)));
+      await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(alloc.reason)));
       return;
     }
     try {
@@ -424,10 +423,10 @@ async function runListen(interaction, mode) {
         config: cfg
       });
     } catch (err) {
-      await interaction.reply(makeMsg("Assistant", formatAssistantError(err)));
+      await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(err)));
       return;
     }
-    await interaction.reply(makeMsg("Assistant", "Free mode started."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Free mode started."));
     return;
   }
 
@@ -437,7 +436,7 @@ async function runListen(interaction, mode) {
     ownerUserId: userId
   });
   if (!alloc.ok) {
-    await interaction.reply(makeMsg("Assistant", formatAssistantError(alloc.reason)));
+    await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(alloc.reason)));
     return;
   }
   let result;
@@ -458,10 +457,10 @@ async function runListen(interaction, mode) {
       system: resolvedSystem
     });
   } catch (err) {
-    await interaction.reply(makeMsg("Assistant", formatAssistantError(err)));
+    await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(err)));
     return;
   }
-  await interaction.reply(
+  await replyInteraction(interaction, 
     makeMsg("Assistant", result?.transcript ? `Heard: ${result.transcript}` : "Done.")
   );
 }
@@ -475,7 +474,7 @@ export async function execute(interaction) {
     const vc = interaction.member?.voice?.channel ?? null;
     const sess = vc ? getAssistantSessionAgent(guildId, vc.id) : { ok: false };
     const active = sess.ok;
-    await interaction.reply(
+    await replyInteraction(interaction, 
       makeMsg("Assistant", active ? "Active in your voice channel." : "Not active.")
     );
     return;
@@ -483,7 +482,7 @@ export async function execute(interaction) {
 
   if (sub === "config") {
     if (!interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply(makeMsg("Assistant", "Manage Server permission required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Manage Server permission required."));
       return;
     }
     const enabled = interaction.options.getBoolean("enabled");
@@ -532,7 +531,7 @@ export async function execute(interaction) {
 
   if (sub === "presets") {
     if (!interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply(makeMsg("Assistant", "Manage Server permission required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Manage Server permission required."));
       return;
     }
     const action = interaction.options.getString("action", true);
@@ -549,50 +548,50 @@ export async function execute(interaction) {
     }
     if (action === "clear") {
       await setAssistantVoicePresets(guildId, []);
-      await interaction.reply(makeMsg("Assistant", "Cleared voice presets."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Cleared voice presets."));
       return;
     }
     const raw = interaction.options.getString("presets") || "";
     const list = raw.split(",").map(x => x.trim()).filter(Boolean);
     await setAssistantVoicePresets(guildId, list);
-    await interaction.reply(makeMsg("Assistant", `Set presets: ${list.join(", ") || "(none)"}`));
+    await replyInteraction(interaction, makeMsg("Assistant", `Set presets: ${list.join(", ") || "(none)"}`));
     return;
   }
 
   if (sub === "channel-voice") {
     if (!interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply(makeMsg("Assistant", "Manage Server permission required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Manage Server permission required."));
       return;
     }
     const action = interaction.options.getString("action", true);
     if (action === "clear-all") {
       await clearAssistantChannelVoices(guildId);
-      await interaction.reply(makeMsg("Assistant", "Cleared all channel voice overrides."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Cleared all channel voice overrides."));
       return;
     }
     const channel = interaction.options.getChannel("channel");
     if (!channel) {
-      await interaction.reply(makeMsg("Assistant", "Channel is required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Channel is required."));
       return;
     }
     if (action === "clear") {
       await setAssistantChannelVoice(guildId, channel.id, "");
-      await interaction.reply(makeMsg("Assistant", `Cleared voice for <#${channel.id}>.`));
+      await replyInteraction(interaction, makeMsg("Assistant", `Cleared voice for <#${channel.id}>.`));
       return;
     }
     const voice = interaction.options.getString("voice");
     if (!voice) {
-      await interaction.reply(makeMsg("Assistant", "Voice is required for set."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Voice is required for set."));
       return;
     }
     await setAssistantChannelVoice(guildId, channel.id, voice);
-    await interaction.reply(makeMsg("Assistant", `Set voice for <#${channel.id}> to ${voice}.`));
+    await replyInteraction(interaction, makeMsg("Assistant", `Set voice for <#${channel.id}> to ${voice}.`));
     return;
   }
 
   if (sub === "profile") {
     if (!interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply(makeMsg("Assistant", "Manage Server permission required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Manage Server permission required."));
       return;
     }
     const action = interaction.options.getString("action", true);
@@ -609,60 +608,60 @@ export async function execute(interaction) {
     }
     if (action === "clear") {
       await setAssistantConfig(guildId, { profiles: {} });
-      await interaction.reply(makeMsg("Assistant", "Cleared profiles."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Cleared profiles."));
       return;
     }
     const name = interaction.options.getString("name");
     if (!name) {
-      await interaction.reply(makeMsg("Assistant", "Profile name required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Profile name required."));
       return;
     }
     if (action === "remove") {
       await removeAssistantProfile(guildId, name);
-      await interaction.reply(makeMsg("Assistant", `Removed profile ${name}.`));
+      await replyInteraction(interaction, makeMsg("Assistant", `Removed profile ${name}.`));
       return;
     }
     const voice = interaction.options.getString("voice") || "";
     const prompt = interaction.options.getString("prompt") || "";
     await setAssistantProfile(guildId, name, { voice, prompt });
-    await interaction.reply(makeMsg("Assistant", `Set profile ${name}.`));
+    await replyInteraction(interaction, makeMsg("Assistant", `Set profile ${name}.`));
     return;
   }
 
   if (sub === "channel-profile") {
     if (!interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply(makeMsg("Assistant", "Manage Server permission required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Manage Server permission required."));
       return;
     }
     const action = interaction.options.getString("action", true);
     if (action === "clear-all") {
       await clearAssistantChannelProfiles(guildId);
-      await interaction.reply(makeMsg("Assistant", "Cleared all channel profiles."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Cleared all channel profiles."));
       return;
     }
     const channel = interaction.options.getChannel("channel");
     if (!channel) {
-      await interaction.reply(makeMsg("Assistant", "Channel is required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Channel is required."));
       return;
     }
     if (action === "clear") {
       await setAssistantChannelProfile(guildId, channel.id, "");
-      await interaction.reply(makeMsg("Assistant", `Cleared profile for <#${channel.id}>.`));
+      await replyInteraction(interaction, makeMsg("Assistant", `Cleared profile for <#${channel.id}>.`));
       return;
     }
     const profile = interaction.options.getString("profile");
     if (!profile) {
-      await interaction.reply(makeMsg("Assistant", "Profile is required for set."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Profile is required for set."));
       return;
     }
     await setAssistantChannelProfile(guildId, channel.id, profile);
-    await interaction.reply(makeMsg("Assistant", `Set profile for <#${channel.id}> to ${profile}.`));
+    await replyInteraction(interaction, makeMsg("Assistant", `Set profile for <#${channel.id}> to ${profile}.`));
     return;
   }
 
   if (sub === "voice-personality") {
     if (!interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply(makeMsg("Assistant", "Manage Server permission required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Manage Server permission required."));
       return;
     }
     const action = interaction.options.getString("action", true);
@@ -679,32 +678,32 @@ export async function execute(interaction) {
     }
     if (action === "clear-all") {
       await clearAssistantVoicePersonalities(guildId);
-      await interaction.reply(makeMsg("Assistant", "Cleared all voice personalities."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Cleared all voice personalities."));
       return;
     }
     const voice = interaction.options.getString("voice");
     if (!voice) {
-      await interaction.reply(makeMsg("Assistant", "Voice is required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Voice is required."));
       return;
     }
     if (action === "clear") {
       await setAssistantVoicePersonality(guildId, voice, "");
-      await interaction.reply(makeMsg("Assistant", `Cleared personality for ${voice}.`));
+      await replyInteraction(interaction, makeMsg("Assistant", `Cleared personality for ${voice}.`));
       return;
     }
     const prompt = interaction.options.getString("prompt") || "";
     if (!prompt) {
-      await interaction.reply(makeMsg("Assistant", "Prompt is required for set."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Prompt is required for set."));
       return;
     }
     await setAssistantVoicePersonality(guildId, voice, prompt);
-    await interaction.reply(makeMsg("Assistant", `Set personality for ${voice}.`));
+    await replyInteraction(interaction, makeMsg("Assistant", `Set personality for ${voice}.`));
     return;
   }
 
   if (sub === "rotation") {
     if (!interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply(makeMsg("Assistant", "Manage Server permission required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Manage Server permission required."));
       return;
     }
     const action = interaction.options.getString("action", true);
@@ -713,18 +712,18 @@ export async function execute(interaction) {
     if (action === "clear-all") {
       rotation.channelVoices = {};
       await setAssistantRotation(guildId, rotation);
-      await interaction.reply(makeMsg("Assistant", "Cleared rotation config."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Cleared rotation config."));
       return;
     }
     const channel = interaction.options.getChannel("channel");
     if (!channel) {
-      await interaction.reply(makeMsg("Assistant", "Channel is required."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Channel is required."));
       return;
     }
     if (action === "clear") {
       delete rotation.channelVoices[channel.id];
       await setAssistantRotation(guildId, rotation);
-      await interaction.reply(makeMsg("Assistant", `Cleared rotation for <#${channel.id}>.`));
+      await replyInteraction(interaction, makeMsg("Assistant", `Cleared rotation for <#${channel.id}>.`));
       return;
     }
     const voices = (interaction.options.getString("voices") || "")
@@ -732,7 +731,7 @@ export async function execute(interaction) {
       .map(x => x.trim())
       .filter(Boolean);
     if (!voices.length) {
-      await interaction.reply(makeMsg("Assistant", "Voices are required for set."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Voices are required for set."));
       return;
     }
     const intervalSec = interaction.options.getInteger("interval_sec");
@@ -741,14 +740,14 @@ export async function execute(interaction) {
     if (intervalSec) rotation.intervalSec = intervalSec;
     if (enabled !== null) rotation.enabled = Boolean(enabled);
     await setAssistantRotation(guildId, rotation);
-    await interaction.reply(makeMsg("Assistant", `Set rotation for <#${channel.id}>.`));
+    await replyInteraction(interaction, makeMsg("Assistant", `Set rotation for <#${channel.id}>.`));
     return;
   }
 
   if (sub === "session") {
     const voiceCheck = requireVoice(interaction);
     if (!voiceCheck.ok) {
-      await interaction.reply(makeMsg("Assistant", "Join a voice channel."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Join a voice channel."));
       return;
     }
     const vc = voiceCheck.vc;
@@ -756,12 +755,12 @@ export async function execute(interaction) {
     const pitch = interaction.options.getNumber("pitch");
     const volume = interaction.options.getNumber("volume");
     if (speed === null && pitch === null && volume === null) {
-      await interaction.reply(makeMsg("Assistant", "Provide speed, pitch, or volume."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Provide speed, pitch, or volume."));
       return;
     }
     const sess = getAssistantSessionAgent(guildId, vc.id);
     if (!sess.ok) {
-      await interaction.reply(makeMsg("Assistant", "Assistant is not active in this channel."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Assistant is not active in this channel."));
       return;
     }
     try {
@@ -782,9 +781,9 @@ export async function execute(interaction) {
           `volume: ${settings.volume ?? "n/a"}`
         ].join("\n")
       );
-      await interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [embed] });
+      await replyInteraction(interaction, { embeds: [embed] });
     } catch (err) {
-      await interaction.reply(makeMsg("Assistant", formatAssistantError(err)));
+      await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(err)));
     }
     return;
   }
@@ -792,7 +791,7 @@ export async function execute(interaction) {
   if (sub === "listen") {
     const mode = interaction.options.getString("mode");
     if (!mode) {
-      await interaction.reply(makeListenPrompt(userId));
+      await replyInteraction(interaction, makeListenPrompt(userId));
       return;
     }
     await runListen(interaction, mode);
@@ -801,14 +800,14 @@ export async function execute(interaction) {
 
   const voiceCheck = requireVoice(interaction);
   if (!voiceCheck.ok) {
-    await interaction.reply(makeMsg("Assistant", "Join a voice channel."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Join a voice channel."));
     return;
   }
   const vc = voiceCheck.vc;
 
   const cfg = await getAssistantConfig(guildId);
   if (!cfg.enabled && sub !== "leave" && sub !== "stop") {
-    await interaction.reply(makeMsg("Assistant", "Assistant is disabled for this server."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Assistant is disabled for this server."));
     return;
   }
   const isAdmin = Boolean(
@@ -816,18 +815,18 @@ export async function execute(interaction) {
       interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild)
   );
   if (!isAdmin && cfg.allowChannelIds?.length && !cfg.allowChannelIds.includes(String(vc.id))) {
-    await interaction.reply(makeMsg("Assistant", "Assistant is not allowed in this channel."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Assistant is not allowed in this channel."));
     return;
   }
   if (!isAdmin && !memberHasRole(interaction.member, cfg.allowRoleIds)) {
-    await interaction.reply(makeMsg("Assistant", "You don't have access to the assistant."));
+    await replyInteraction(interaction, makeMsg("Assistant", "You don't have access to the assistant."));
     return;
   }
   if (sub === "start" || sub === "join" || sub === "say") {
     const existing = getAssistantSessionAgent(guildId, vc.id);
     const active = countAssistantSessionsInGuild(guildId);
     if (!existing.ok && Number.isFinite(cfg.maxSessions) && active >= cfg.maxSessions) {
-      await interaction.reply(makeMsg("Assistant", "Assistant session limit reached."));
+      await replyInteraction(interaction, makeMsg("Assistant", "Assistant session limit reached."));
       return;
     }
   }
@@ -838,7 +837,7 @@ export async function execute(interaction) {
   });
 
   if (!alloc.ok && sub !== "leave") {
-    await interaction.reply(makeMsg("Assistant", formatAssistantError(alloc.reason)));
+    await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(alloc.reason)));
     return;
   }
 
@@ -852,7 +851,7 @@ export async function execute(interaction) {
         actorUserId: userId
       });
     } catch (err) {
-      await interaction.reply(makeMsg("Assistant", formatAssistantError(err)));
+      await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(err)));
       return;
     }
     await auditLog({
@@ -861,7 +860,7 @@ export async function execute(interaction) {
       action: "assistant.join",
       details: { voiceChannelId: vc.id }
     });
-    await interaction.reply(makeMsg("Assistant", "Joined your voice channel."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Joined your voice channel."));
     return;
   }
 
@@ -876,7 +875,7 @@ export async function execute(interaction) {
         config: cfg
       });
     } catch (err) {
-      await interaction.reply(makeMsg("Assistant", formatAssistantError(err)));
+      await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(err)));
       return;
     }
     await auditLog({
@@ -885,7 +884,7 @@ export async function execute(interaction) {
       action: "assistant.start",
       details: { voiceChannelId: vc.id }
     });
-    await interaction.reply(makeMsg("Assistant", "Free mode started."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Free mode started."));
     return;
   }
 
@@ -907,7 +906,7 @@ export async function execute(interaction) {
       action: "assistant.stop",
       details: { voiceChannelId: vc.id }
     });
-    await interaction.reply(makeMsg("Assistant", "Free mode stopped."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Free mode stopped."));
     return;
   }
 
@@ -929,7 +928,7 @@ export async function execute(interaction) {
       action: "assistant.leave",
       details: { voiceChannelId: vc.id }
     });
-    await interaction.reply(makeMsg("Assistant", "Left the voice channel."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Left the voice channel."));
     return;
   }
 
@@ -946,10 +945,10 @@ export async function execute(interaction) {
         voice: cfg.channelVoices?.[vc.id] ?? cfg.voice
       });
     } catch (err) {
-      await interaction.reply(makeMsg("Assistant", formatAssistantError(err)));
+      await replyInteraction(interaction, makeMsg("Assistant", formatAssistantError(err)));
       return;
     }
-    await interaction.reply(makeMsg("Assistant", "Speaking."));
+    await replyInteraction(interaction, makeMsg("Assistant", "Speaking."));
   }
 }
 
@@ -960,7 +959,7 @@ export async function handleButton(interaction) {
   const mode = parts[1];
   const userId = parts[2];
   if (userId && userId !== interaction.user.id) {
-    await interaction.reply({ content: "Not for you.", ephemeral: true });
+    await replyInteraction(interaction, { content: "Not for you." });
     return true;
   }
   await runListen(interaction, mode === "free" ? "free" : "once");

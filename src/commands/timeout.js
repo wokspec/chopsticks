@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
 import { canModerateTarget, fetchTargetMember, moderationGuardMessage } from "../moderation/guards.js";
-import { reasonOrDefault, replyModError, replyModSuccess } from "../moderation/output.js";
+import { notifyUserByDm, reasonOrDefault, replyModError, replyModSuccess } from "../moderation/output.js";
 
 export const meta = {
   guildOnly: true,
@@ -43,13 +43,13 @@ export async function execute(interaction) {
     return;
   }
 
-  let dmStatus = "not-requested";
+  let dmMessage = "";
   if (notifyUser) {
-    const dmReason = minutes === 0
+    dmMessage = minutes === 0
       ? `Your timeout was cleared in **${interaction.guild?.name || "this server"}**.`
       : `You were timed out in **${interaction.guild?.name || "this server"}** for ${minutes} minute(s).\nReason: ${reason}`;
-    dmStatus = await user.send(dmReason).then(() => "sent").catch(() => "failed");
   }
+  const dmStatus = await notifyUserByDm(user, dmMessage, { enabled: notifyUser });
 
   const ms = minutes === 0 ? null : minutes * 60 * 1000;
   try {

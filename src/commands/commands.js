@@ -3,10 +3,10 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
-  MessageFlags,
   SlashCommandBuilder,
   StringSelectMenuBuilder
 } from "discord.js";
+import { replyInteraction } from "../utils/interactionReply.js";
 
 const UI_PREFIX = "cmdui";
 
@@ -201,10 +201,7 @@ export async function execute(interaction) {
 
   if (sub === "list") {
     const list = Array.from(cats.keys()).sort();
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      content: "Categories:\n" + list.join(", ")
-    });
+    await replyInteraction(interaction, { content: "Categories:\n" + list.join(", ") });
     return;
   }
 
@@ -212,11 +209,10 @@ export async function execute(interaction) {
     const name = interaction.options.getString("name", true);
     const list = cats.get(name);
     if (!list) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Category not found." });
+      await replyInteraction(interaction, { content: "Category not found." });
       return;
     }
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
+    await replyInteraction(interaction, {
       content: `/${name}: ` + list.map(c => `/${c}`).join(", ")
     });
     return;
@@ -229,8 +225,7 @@ export async function execute(interaction) {
       const name = c.data?.name || "";
       if (name.includes(term)) hits.push(name);
     }
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
+    await replyInteraction(interaction, {
       content: hits.length ? hits.map(n => `/${n}`).join(", ") : "No matches."
     });
     return;
@@ -239,11 +234,7 @@ export async function execute(interaction) {
   if (sub === "ui") {
     const embed = buildCommandCenterEmbed(interaction.client);
     const components = buildCommandCenterComponents(interaction.client, interaction.user.id);
-    await interaction.reply({
-      flags: MessageFlags.Ephemeral,
-      embeds: [embed],
-      components
-    });
+    await replyInteraction(interaction, { embeds: [embed], components });
   }
 }
 
@@ -253,7 +244,7 @@ export async function handleSelect(interaction) {
   if (!parsed) return false;
 
   if (parsed.userId !== interaction.user.id) {
-    await interaction.reply({ content: "This panel belongs to another user.", ephemeral: true });
+    await replyInteraction(interaction, { content: "This panel belongs to another user." });
     return true;
   }
 
@@ -270,7 +261,7 @@ export async function handleSelect(interaction) {
     return true;
   }
 
-  await interaction.reply({ content: "Unsupported command center action.", ephemeral: true });
+  await replyInteraction(interaction, { content: "Unsupported command center action." });
   return true;
 }
 
@@ -280,7 +271,7 @@ export async function handleButton(interaction) {
   if (!parsed) return false;
 
   if (parsed.userId !== interaction.user.id) {
-    await interaction.reply({ content: "This panel belongs to another user.", ephemeral: true });
+    await replyInteraction(interaction, { content: "This panel belongs to another user." });
     return true;
   }
 
@@ -296,6 +287,6 @@ export async function handleButton(interaction) {
     return true;
   }
 
-  await interaction.reply({ content: "Unsupported command center button.", ephemeral: true });
+  await replyInteraction(interaction, { content: "Unsupported command center button." });
   return true;
 }

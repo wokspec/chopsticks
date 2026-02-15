@@ -19,7 +19,7 @@ console.log("✅ Configuration validated.");
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Client, Collection, GatewayIntentBits, Events, EmbedBuilder } from "discord.js";
+import { Client, Collection, GatewayIntentBits, Events } from "discord.js";
 import { AgentManager } from "./agents/agentManager.js";
 import { handleButton as handleMusicButton, handleSelect as handleMusicSelect } from "./commands/music.js";
 import { handleButton as handleAssistantButton } from "./commands/assistant.js";
@@ -33,14 +33,14 @@ import {
 } from "./utils/healthServer.js";
 import { flushCommandStats, flushCommandStatsDaily } from "./utils/audit.js";
 import { checkRateLimit } from "./utils/ratelimit.js";
-import { canRunCommand } from "./utils/permissions.js";
+import { canRunCommand, canRunPrefixCommand } from "./utils/permissions.js";
 import { getPrefixCommands } from "./prefix/registry.js";
-import { canRunPrefixCommand } from "./utils/permissions.js";
 import { parsePrefixArgs, resolveAliasedCommand, suggestCommandNames } from "./prefix/hardening.js";
 import { loadGuildData } from "./utils/storage.js";
 import { addCommandLog } from "./utils/commandlog.js";
 import { botLogger } from "./utils/modernLogger.js";
 import { trackCommand } from "./utils/metrics.js";
+import { buildErrorEmbed, replyInteraction, replyInteractionIfFresh } from "./utils/interactionReply.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -604,12 +604,9 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (err) {
       console.error("[select]", err?.stack ?? err?.message ?? err);
       try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [new EmbedBuilder().setTitle("Error").setDescription("Selection failed.")],
-            ephemeral: true
-          });
-        }
+        await replyInteractionIfFresh(interaction, {
+          embeds: [buildErrorEmbed("Selection failed.")]
+        });
       } catch {}
     }
   }
@@ -624,12 +621,9 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (err) {
       console.error("[button]", err?.stack ?? err?.message ?? err);
       try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [new EmbedBuilder().setTitle("Error").setDescription("Button action failed.")],
-            ephemeral: true
-          });
-        }
+        await replyInteractionIfFresh(interaction, {
+          embeds: [buildErrorEmbed("Button action failed.")]
+        });
       } catch {}
     }
   }
@@ -673,11 +667,7 @@ client.on(Events.InteractionCreate, async interaction => {
     else if (reason === "no-perms" || reason === "missing-perms" || reason === "missing-role") msg = "You do not have permission to run this command.";
 
     try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ content: msg, ephemeral: true });
-      } else {
-        await interaction.reply({ content: msg, ephemeral: true });
-      }
+      await replyInteraction(interaction, { content: msg });
     } catch {}
     return;
   }
@@ -707,17 +697,9 @@ client.on(Events.InteractionCreate, async interaction => {
       : "Command failed.";
     
     try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({
-          embeds: [new EmbedBuilder().setTitle("Error").setDescription(errorMsg)],
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({
-          embeds: [new EmbedBuilder().setTitle("Error").setDescription(errorMsg)],
-          ephemeral: true
-        });
-      }
+      await replyInteraction(interaction, {
+        embeds: [buildErrorEmbed(errorMsg)]
+      });
     } catch (replyError) {
       botLogger.error({ commandName, error: replyError.message }, "Failed to send error response");
     }

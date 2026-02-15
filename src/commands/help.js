@@ -6,16 +6,10 @@ export const data = new SlashCommandBuilder()
   .setDescription("Browse commands and get command details")
   .addStringOption(o =>
     o
-      .setName("command")
-      .setDescription("Specific command to inspect (e.g. music)")
+      .setName("query")
+      .setDescription("Choose a command, or choose all")
       .setRequired(false)
       .setAutocomplete(true)
-  )
-  .addBooleanOption(o =>
-    o
-      .setName("all")
-      .setDescription("Show all commands with descriptions")
-      .setRequired(false)
   );
 
 const OPTION_TYPES = {
@@ -138,13 +132,13 @@ function formatDetailedHelp(record, prefix) {
 
   lines.push(`Slash usage: /${record.name}`);
   lines.push(`Prefix usage: ${prefix}${record.name}`);
-  lines.push("Tip: /help all:true to see every command.");
+  lines.push("Tip: /help query:all to see every command.");
   return lines;
 }
 
 export async function autocomplete(interaction) {
   const focused = interaction.options.getFocused(true);
-  if (focused?.name !== "command") {
+  if (focused?.name !== "query") {
     await interaction.respond([]);
     return;
   }
@@ -155,22 +149,32 @@ export async function autocomplete(interaction) {
     .filter(r => r.name)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const hits = (q
+  const hits = q
     ? candidates.filter(r => r.name.includes(q) || r.description.toLowerCase().includes(q))
-    : candidates
-  ).slice(0, 25);
+    : candidates;
 
-  await interaction.respond(
-    hits.map(r => ({
+  const out = [];
+  const includeAll = !q || "all".includes(q);
+  if (includeAll) {
+    out.push({
+      name: "all - Show all commands".slice(0, 100),
+      value: "all"
+    });
+  }
+
+  for (const r of hits) {
+    if (out.length >= 25) break;
+    out.push({
       name: `/${r.name} - ${r.description}`.slice(0, 100),
       value: r.name
-    }))
-  );
+    });
+  }
+
+  await interaction.respond(out.slice(0, 25));
 }
 
 export async function execute(interaction) {
-  const query = String(interaction.options.getString("command", false) || "").trim().toLowerCase();
-  const showAll = interaction.options.getBoolean("all", false) === true;
+  const query = String(interaction.options.getString("query", false) || "").trim().toLowerCase();
   const records = Array.from(interaction.client.commands.values())
     .map(commandRecord)
     .filter(r => r.name)
@@ -184,7 +188,7 @@ export async function execute(interaction) {
     } catch {}
   }
 
-  if (query) {
+  if (query && query !== "all") {
     const exact = records.find(r => r.name === query);
     const fallbackMatches = records.filter(r => r.name.includes(query)).slice(0, 5).map(r => `/${r.name}`);
     if (!exact) {
@@ -194,7 +198,7 @@ export async function execute(interaction) {
         fallbackMatches.length
           ? `Closest matches: ${fallbackMatches.join(", ")}`
           : "No close matches found.",
-        "Tip: use autocomplete in /help command:<name>."
+        "Tip: use autocomplete in /help query:<name>."
       ];
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
@@ -214,12 +218,11 @@ export async function execute(interaction) {
     "Chopsticks Help",
     `Slash: use /command`,
     `Prefix: use ${prefix}command`,
-    "Use /help command:<name> for command details.",
+    "Use /help query:<name> for command details.",
+    "Use /help query:all to list all commands.",
     "Use /commands ui for the interactive command center.",
     ""
   ];
-  const listLines = records.map(r =>
-    showAll ? `/${r.name} :: ${r.description}` : `/${r.name}`
-  );
+  const listLines = records.map(r => `/${r.name} :: ${r.description}`);
   await replyChunkedEphemeral(interaction, [...header, ...listLines]);
 }

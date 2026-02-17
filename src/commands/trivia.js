@@ -33,6 +33,31 @@ const MAX_FLEET_OPPONENTS = 6;
 const MIN_FLEET_OPPONENTS = 2;
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 const DIFFICULTY_CHOICES = ["easy", "normal", "hard", "nightmare"];
+const MODE_SOLO = "solo";
+const MODE_PVP = "pvp";
+const MODE_DUEL = "duel";
+const MODE_FLEET = "fleet";
+
+function isSolo(session) {
+  return String(session?.mode || "").toLowerCase() === MODE_SOLO;
+}
+
+function isPvp(session) {
+  return String(session?.mode || "").toLowerCase() === MODE_PVP && Boolean(session?.opponentUserId);
+}
+
+function isAgentMatch(session) {
+  const m = String(session?.mode || "").toLowerCase();
+  return m === MODE_DUEL || m === MODE_FLEET;
+}
+
+function canUseMatchUi(session, userId) {
+  const uid = String(userId || "");
+  if (!uid) return false;
+  if (uid === String(session?.userId || "")) return true;
+  if (isPvp(session) && uid === String(session?.opponentUserId || "")) return true;
+  return false;
+}
 
 function formatAgentTextError(reasonOrErr) {
   const msg = String(reasonOrErr?.message ?? reasonOrErr);
@@ -102,9 +127,20 @@ function normalizeSession(session) {
     }));
   }
 
-  session.mode = String(session.mode || (session.agents.length > 1 ? "fleet" : "duel")).toLowerCase();
+  const modeRaw = String(session.mode || "").toLowerCase();
+  const knownModes = new Set(["duel", "fleet", "solo", "pvp"]);
+  session.mode = knownModes.has(modeRaw)
+    ? modeRaw
+    : String(session.agents.length > 1 ? "fleet" : "duel");
   session.opponents = clampOpponents(session.opponents, session.agents.length);
   session.opponents = Math.max(session.opponents, session.agents.length);
+
+  // PvP/Solo fields (harmless for agent matches).
+  session.opponentUserId = String(session.opponentUserId || "").trim() || null;
+  session.opponentPick = Number.isFinite(Number(session.opponentPick)) ? Math.max(0, Math.min(5, Math.trunc(Number(session.opponentPick)))) : null;
+  session.opponentLockedAt = session.opponentLockedAt ? Number(session.opponentLockedAt) : null;
+  session.acceptedAt = session.acceptedAt ? Number(session.acceptedAt) : null;
+  session.forfeitedBy = String(session.forfeitedBy || "").trim() || null;
 
   const first = session.agents[0] || null;
   session.agentId = first?.agentId ?? null;
@@ -134,6 +170,8 @@ function earliestLockedAt(entries) {
 }
 
 function buildOpponentSummary(session) {
+  if (isSolo(session)) return "None (solo)";
+  if (isPvp(session)) return `<@${session.opponentUserId}>`;
   const agents = session.agents || [];
   if (!agents.length) {
     const planned = clampOpponents(session.opponents, 1);
@@ -146,10 +184,16 @@ function buildOpponentSummary(session) {
 }
 
 function buildPicksSummary(session) {
+  const lines = [];
   const yourPick = Number.isFinite(Number(session.userPick)) ? LETTERS[Number(session.userPick)] : null;
-  const lines = [
-    yourPick ? `You: **${yourPick}**` : "You: _not locked_"
-  ];
+  const youLabel = isPvp(session) ? `<@${session.userId}>` : "You";
+  lines.push(yourPick ? `${youLabel}: **${yourPick}**` : `${youLabel}: _not locked_`);
+
+  if (isPvp(session)) {
+    const oppPick = Number.isFinite(Number(session.opponentPick)) ? LETTERS[Number(session.opponentPick)] : null;
+    lines.push(oppPick ? `<@${session.opponentUserId}>: **${oppPick}**` : `<@${session.opponentUserId}>: _not locked_`);
+    return lines.join("\n").slice(0, 1024);
+  }
 
   for (const a of session.agents || []) {
     const pick = Number.isFinite(Number(a.pick)) ? LETTERS[Number(a.pick)] : null;
@@ -164,25 +208,57 @@ function buildPicksSummary(session) {
 
 function buildQuestionEmbed({ session }) {
   const lines = (session.choices || []).map((c, idx) => `**${LETTERS[idx] || String(idx + 1)}.** ${c}`);
-  const locked = Boolean(session.userLockedAt);
   const remainingSec = Math.max(0, Math.ceil((Number(session.expiresAt || 0) - Date.now()) / 1000));
 
+  const modeText = isSolo(session)
+    ? "Solo"
+    : isPvp(session)
+      ? "Versus"
+      : session.agents.length > 1
+        ? `Fleet (${session.agents.length})`
+        : "Duel";
+
+  const title = isSolo(session)
+    ? "🧩 Trivia Solo"
+    : isPvp(session)
+      ? "🧩 Trivia Versus"
+      : session.agents.length > 1
+        ? "🧩 Trivia Fleet Match"
+        : "🧩 Trivia Duel";
+
+  const footerText = (() => {
+    if (isPvp(session)) {
+      const hostLocked = Boolean(session.userLockedAt);
+      const oppLocked = Boolean(session.opponentLockedAt);
+      if (hostLocked && oppLocked) return "Locked in. Revealing results…";
+      if (hostLocked && !oppLocked) return `Waiting for <@${session.opponentUserId}> to lock in… Time left: ${remainingSec}s`;
+      if (!hostLocked && oppLocked) return `Waiting for <@${session.userId}> to lock in… Time left: ${remainingSec}s`;
+      return `Pick an answer, then Lock In. Time left: ${remainingSec}s`;
+    }
+
+    const locked = Boolean(session.userLockedAt);
+    if (locked) {
+      return isSolo(session)
+        ? "Locked in. Revealing results…"
+        : "Locked in. Waiting for opponent responses…";
+    }
+    return `Pick an answer, then Lock In. Time left: ${remainingSec}s`;
+  })();
+
   const e = new EmbedBuilder()
-    .setTitle(session.agents.length > 1 ? "🧩 Trivia Fleet Match" : "🧩 Trivia Duel")
+    .setTitle(title)
     .setColor(Colors.INFO)
     .setDescription(pickDmIntro())
     .addFields(
       { name: "Category", value: String(session.category || "Any"), inline: true },
       { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
-      { name: "Mode", value: session.agents.length > 1 ? `Fleet (${session.agents.length})` : "Duel", inline: true },
+      { name: "Mode", value: modeText, inline: true },
       { name: "Opponents", value: buildOpponentSummary(session), inline: false },
       { name: "Question", value: String(session.prompt || "…"), inline: false },
       { name: "Choices", value: lines.join("\n").slice(0, 1024), inline: false }
     )
     .setFooter({
-      text: locked
-        ? "Locked in. Waiting for opponent responses…"
-        : `Pick an answer, then Lock In. Time left: ${remainingSec}s`
+      text: footerText
     })
     .setTimestamp();
 
@@ -231,10 +307,49 @@ function buildAnswerComponents(sessionId, choicesLen, { disabled = false } = {})
 }
 
 function buildLobbyEmbed(session) {
+  if (isSolo(session)) {
+    const note = session.startNote ? `\n\n${session.startNote}` : "";
+    return new EmbedBuilder()
+      .setTitle("🧩 Trivia: Solo Ready")
+      .setColor(Colors.INFO)
+      .setDescription(
+        `${pickDmIntro()}\n\n` +
+        `**Mode:** Solo\n` +
+        `**Difficulty:** ${formatDifficulty(session.difficulty)}\n` +
+        `**Category:** ${String(session.category || "Any")}\n\n` +
+        `Select options below, then press **Start**.${note}`
+      )
+      .addFields({ name: "Opponents", value: "None", inline: false })
+      .setFooter({ text: "This lobby expires if you don't start." })
+      .setTimestamp();
+  }
+
+  if (isPvp(session)) {
+    const accepted = Boolean(session.acceptedAt);
+    const note = session.startNote ? `\n\n${session.startNote}` : "";
+    return new EmbedBuilder()
+      .setTitle("🧩 Trivia: Challenge")
+      .setColor(Colors.INFO)
+      .setDescription(
+        `${pickDmIntro()}\n\n` +
+        `**Mode:** Versus\n` +
+        `**Host:** <@${session.userId}>\n` +
+        `**Opponent:** <@${session.opponentUserId}>\n` +
+        `**Status:** ${accepted ? "✅ Accepted" : "⏳ Waiting for opponent"}\n\n` +
+        `Host can configure options below.${note}`
+      )
+      .addFields(
+        { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
+        { name: "Category", value: String(session.category || "Any"), inline: true }
+      )
+      .setFooter({ text: "This lobby expires if you don't start." })
+      .setTimestamp();
+  }
+
   const configuredOpponents = clampOpponents(session.opponents, 1);
   const modeLine = configuredOpponents > 1 ? `Fleet (${configuredOpponents} agents)` : "Duel (1 agent)";
   const note = session.startNote ? `\n\n${session.startNote}` : "";
-  const e = new EmbedBuilder()
+  return new EmbedBuilder()
     .setTitle("🧩 Trivia: Ready Check")
     .setColor(Colors.INFO)
     .setDescription(
@@ -247,7 +362,6 @@ function buildLobbyEmbed(session) {
     .addFields({ name: "Opponents", value: buildOpponentSummary(session), inline: false })
     .setFooter({ text: "This lobby expires if you don't start." })
     .setTimestamp();
-  return e;
 }
 
 function buildDifficultyMenuOptions(selected) {
@@ -323,19 +437,22 @@ function buildLobbyComponents(sessionId, session, { disabled = false } = {}) {
     .setDisabled(Boolean(disabled))
     .addOptions(buildCategoryMenuOptions(session?.category));
 
-  const opponentsMenu = new StringSelectMenuBuilder()
-    .setCustomId(`trivia:cfg:${sessionId}:opponents`)
-    .setPlaceholder("Opponents")
-    .setMinValues(1)
-    .setMaxValues(1)
-    .setDisabled(Boolean(disabled))
-    .addOptions(buildOpponentsMenuOptions(session?.opponents));
+  const includeOpponentsMenu = !(isSolo(session) || isPvp(session));
+  const opponentsMenu = includeOpponentsMenu
+    ? new StringSelectMenuBuilder()
+      .setCustomId(`trivia:cfg:${sessionId}:opponents`)
+      .setPlaceholder("Opponents")
+      .setMinValues(1)
+      .setMaxValues(1)
+      .setDisabled(Boolean(disabled))
+      .addOptions(buildOpponentsMenuOptions(session?.opponents))
+    : null;
 
   const startBtn = new ButtonBuilder()
     .setCustomId(`trivia:btn:${sessionId}:start`)
     .setLabel("Start")
     .setStyle(ButtonStyle.Primary)
-    .setDisabled(Boolean(disabled));
+    .setDisabled(Boolean(disabled) || (isPvp(session) && !session?.acceptedAt));
 
   const rulesBtn = new ButtonBuilder()
     .setCustomId(`trivia:btn:${sessionId}:rules`)
@@ -351,16 +468,36 @@ function buildLobbyComponents(sessionId, session, { disabled = false } = {}) {
 
   const forfeitBtn = new ButtonBuilder()
     .setCustomId(`trivia:btn:${sessionId}:forfeit`)
-    .setLabel("Cancel")
+    .setLabel(isPvp(session) ? "Cancel / Forfeit" : "Cancel")
     .setStyle(ButtonStyle.Danger)
     .setDisabled(Boolean(disabled));
 
-  return [
+  const rows = [
     new ActionRowBuilder().addComponents(difficultyMenu),
-    new ActionRowBuilder().addComponents(categoryMenu),
-    new ActionRowBuilder().addComponents(opponentsMenu),
-    new ActionRowBuilder().addComponents(startBtn, rulesBtn, statusBtn, forfeitBtn)
+    new ActionRowBuilder().addComponents(categoryMenu)
   ];
+
+  if (opponentsMenu) rows.push(new ActionRowBuilder().addComponents(opponentsMenu));
+
+  if (isPvp(session)) {
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`trivia:btn:${sessionId}:accept`)
+          .setLabel("Accept")
+          .setStyle(ButtonStyle.Success)
+          .setDisabled(Boolean(disabled) || Boolean(session?.acceptedAt)),
+        new ButtonBuilder()
+          .setCustomId(`trivia:btn:${sessionId}:decline`)
+          .setLabel("Decline")
+          .setStyle(ButtonStyle.Danger)
+          .setDisabled(Boolean(disabled) || Boolean(session?.acceptedAt))
+      )
+    );
+  }
+
+  rows.push(new ActionRowBuilder().addComponents(startBtn, rulesBtn, statusBtn, forfeitBtn));
+  return rows;
 }
 
 async function sendViaAgent({ agent, guildId, channelId, actorUserId, content, embeds }) {
@@ -384,18 +521,33 @@ async function getSessionMessage(client, session) {
 
 function buildStatusEmbed(session) {
   const configuredOpponents = getConfiguredOpponents(session);
-  const modeText = configuredOpponents > 1 ? `Fleet (${configuredOpponents})` : "Duel";
+  const modeText = isSolo(session)
+    ? "Solo"
+    : isPvp(session)
+      ? "Versus"
+      : configuredOpponents > 1
+        ? `Fleet (${configuredOpponents})`
+        : "Duel";
   const stage = String(session.stage || "lobby");
   const picks = [];
-  picks.push(Number.isFinite(Number(session.userPick)) ? `You: ${LETTERS[Number(session.userPick)]}` : "You: not selected");
-  if (!(session.agents || []).length) {
-    picks.push("Opponents: assigned on Start");
+  if (isPvp(session)) {
+    const hostPick = Number.isFinite(Number(session.userPick)) ? LETTERS[Number(session.userPick)] : "not selected";
+    const oppPick = Number.isFinite(Number(session.opponentPick)) ? LETTERS[Number(session.opponentPick)] : "not selected";
+    picks.push(`<@${session.userId}>: ${hostPick}`);
+    picks.push(`<@${session.opponentUserId}>: ${oppPick}`);
   } else {
-    for (const a of session.agents.slice(0, 8)) {
-      const pick = Number.isFinite(Number(a.pick)) ? LETTERS[Number(a.pick)] : "thinking";
-      picks.push(`${a.agentTag}: ${pick}`);
+    picks.push(Number.isFinite(Number(session.userPick)) ? `You: ${LETTERS[Number(session.userPick)]}` : "You: not selected");
+    if (isSolo(session)) {
+      // no-op
+    } else if (!(session.agents || []).length) {
+      picks.push("Opponents: assigned on Start");
+    } else {
+      for (const a of session.agents.slice(0, 8)) {
+        const pick = Number.isFinite(Number(a.pick)) ? LETTERS[Number(a.pick)] : "thinking";
+        picks.push(`${a.agentTag}: ${pick}`);
+      }
+      if ((session.agents || []).length > 8) picks.push(`...and ${(session.agents || []).length - 8} more`);
     }
-    if ((session.agents || []).length > 8) picks.push(`...and ${(session.agents || []).length - 8} more`);
   }
 
   const e = new EmbedBuilder()
@@ -406,7 +558,7 @@ function buildStatusEmbed(session) {
       { name: "Stage", value: stage, inline: true },
       { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
       { name: "Category", value: String(session.category || "Any"), inline: true },
-      { name: "Opponents", value: String(configuredOpponents), inline: true },
+      { name: "Opponents", value: isSolo(session) ? "0" : isPvp(session) ? "1" : String(configuredOpponents), inline: true },
       { name: "Session", value: String(session.sessionId || "unknown"), inline: true },
       { name: "Picks", value: picks.join("\n").slice(0, 1024), inline: false }
     )
@@ -446,8 +598,10 @@ function buildRulesEmbed() {
       {
         name: "Modes",
         value: [
-          "Duel: 1 opponent.",
-          "Fleet: 2-6 opponents."
+          "Solo: practice (no opponents).",
+          "Versus: challenge another player.",
+          "Duel: 1 agent opponent.",
+          "Fleet: 2-6 agent opponents."
         ].join("\n"),
         inline: true
       },
@@ -465,6 +619,8 @@ function buildRulesEmbed() {
 }
 
 function getConfiguredOpponents(session) {
+  if (isSolo(session)) return 0;
+  if (isPvp(session)) return 1;
   const base = clampOpponents(session?.opponents, 1);
   if (String(session?.mode || "").toLowerCase() === "fleet") return Math.max(MIN_FLEET_OPPONENTS, base);
   return base;
@@ -531,6 +687,36 @@ async function prepareSessionForMatch(session) {
   return { ok: true };
 }
 
+function prepareSessionForNonAgentMatch(session) {
+  const q = pickTriviaQuestion({ difficulty: session.difficulty, category: session.category });
+  if (!q) return { ok: false, reason: "no-questions" };
+  const { shuffled, correctIndex } = shuffleChoices(q.choices, q.answerIndex);
+
+  session.prompt = q.prompt;
+  session.explanation = q.explanation || null;
+  session.category = q.category || session.category || "Any";
+  session.choices = shuffled.slice(0, 4);
+  session.correctIndex = correctIndex;
+
+  // Ensure agent-related state can't leak into solo/pvp sessions.
+  session.agents = [];
+  session.agentLeases = [];
+  session.agentPick = null;
+  session.agentLockedAt = null;
+  session.agentDueAt = null;
+
+  // Ensure player picks are reset.
+  session.userPick = null;
+  session.userLockedAt = null;
+  if (isPvp(session)) {
+    session.opponentPick = null;
+    session.opponentLockedAt = null;
+  }
+
+  normalizeSession(session);
+  return { ok: true };
+}
+
 async function showQuestion(client, sessionId) {
   const rawSession = await loadTriviaSession(sessionId);
   const session = normalizeSession(rawSession);
@@ -541,10 +727,12 @@ async function showQuestion(client, sessionId) {
   session.revealedAt = revealedAt;
   session.expiresAt = revealedAt + QUESTION_TIME_LIMIT_MS;
 
-  const [minDelay, maxDelay] = agentDelayRangeMs(session.difficulty);
-  for (const a of session.agents || []) {
-    const rnd = Math.floor(minDelay + Math.random() * Math.max(1, maxDelay - minDelay));
-    a.dueAt = revealedAt + Math.max(AGENT_MIN_THINK_MS, rnd);
+  if (isAgentMatch(session)) {
+    const [minDelay, maxDelay] = agentDelayRangeMs(session.difficulty);
+    for (const a of session.agents || []) {
+      const rnd = Math.floor(minDelay + Math.random() * Math.max(1, maxDelay - minDelay));
+      a.dueAt = revealedAt + Math.max(AGENT_MIN_THINK_MS, rnd);
+    }
   }
   normalizeSession(session);
   await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
@@ -558,34 +746,61 @@ async function showQuestion(client, sessionId) {
     }).catch(() => {});
   }
 
-  // Best-effort: first few agents publish a thinking line.
-  for (const a of (session.agents || []).slice(0, 3)) {
-    try {
-      const mgr = global.agentManager;
-      const agent = mgr?.liveAgents?.get?.(a.agentId) || null;
-      if (agent?.ready) {
-        await sendViaAgent({
-          agent,
-          guildId: session.guildId,
-          channelId: session.channelId,
-          actorUserId: session.userId,
-          content: pickAgentThinkingLine(a.agentTag)
-        });
-      }
-    } catch {}
-  }
+  if (isAgentMatch(session)) {
+    // Best-effort: first few agents publish a thinking line.
+    for (const a of (session.agents || []).slice(0, 3)) {
+      try {
+        const mgr = global.agentManager;
+        const agent = mgr?.liveAgents?.get?.(a.agentId) || null;
+        if (agent?.ready) {
+          await sendViaAgent({
+            agent,
+            guildId: session.guildId,
+            channelId: session.channelId,
+            actorUserId: session.userId,
+            content: pickAgentThinkingLine(a.agentTag)
+          });
+        }
+      } catch {}
+    }
 
-  for (const a of session.agents || []) {
-    const dueAt = Number(a.dueAt || 0);
-    setTimeout(() => {
-      maybeRunAgentAnswer(client, sessionId, { slot: a.slot }).catch(() => {});
-    }, Math.max(50, dueAt - Date.now()));
+    for (const a of session.agents || []) {
+      const dueAt = Number(a.dueAt || 0);
+      setTimeout(() => {
+        maybeRunAgentAnswer(client, sessionId, { slot: a.slot }).catch(() => {});
+      }, Math.max(50, dueAt - Date.now()));
+    }
   }
 
   setTimeout(() => {
     (async () => {
       const s = normalizeSession(await loadTriviaSession(sessionId));
       if (!s || s.endedAt) return;
+      if (isPvp(s)) {
+        if (!s.userLockedAt) {
+          s.userLockedAt = Date.now();
+          if (s.userPick === undefined) s.userPick = null;
+        }
+        if (!s.opponentLockedAt) {
+          s.opponentLockedAt = Date.now();
+          if (s.opponentPick === undefined) s.opponentPick = null;
+        }
+        await saveTriviaSession(sessionId, s, SESSION_TTL_SECONDS);
+        await finalizeSession(client, sessionId, { reason: "timeout" });
+        return;
+      }
+
+      if (isSolo(s)) {
+        if (!s.userLockedAt) {
+          s.userLockedAt = Date.now();
+          s.userPick = s.userPick ?? null;
+          await saveTriviaSession(sessionId, s, SESSION_TTL_SECONDS);
+        }
+        await finalizeSession(client, sessionId, { reason: "timeout" });
+        return;
+      }
+
+      // Agent match timeout.
       if (!s.userLockedAt) {
         s.userLockedAt = Date.now();
         s.userPick = null;
@@ -609,11 +824,21 @@ async function runCountdown(client, sessionId) {
       .setColor(Colors.INFO)
       .setDescription(`Question reveals in **${i}**…`)
       .addFields(
-        { name: "Mode", value: session.agents.length > 1 ? `Fleet (${session.agents.length})` : "Duel", inline: true },
+        {
+          name: "Mode",
+          value: isSolo(session)
+            ? "Solo"
+            : isPvp(session)
+              ? "Versus"
+              : session.agents.length > 1
+                ? `Fleet (${session.agents.length})`
+                : "Duel",
+          inline: true
+        },
         { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
         { name: "Category", value: String(session.category || "Any"), inline: true }
       )
-      .setFooter({ text: "Agents cannot answer for at least 3 seconds after reveal." })
+      .setFooter({ text: isAgentMatch(session) ? "Agents cannot answer for at least 3 seconds after reveal." : "Get ready." })
       .setTimestamp();
 
     const { msg } = await getSessionMessage(client, session);
@@ -688,9 +913,305 @@ function resolvePerAgentResult(session, agentEntry) {
   return "tie";
 }
 
-async function finalizeSession(client, sessionId, { reason = "completed" } = {}) {
+function resolveSoloResult(session) {
+  const correct = session.correctIndex;
+  const userPick = Number.isFinite(Number(session.userPick)) ? Number(session.userPick) : null;
+  const userCorrect = userPick !== null && userPick === correct;
+  return { result: userCorrect ? "win" : "lose", userCorrect };
+}
+
+function resolvePvpResult(session) {
+  const correct = session.correctIndex;
+  const hostPick = Number.isFinite(Number(session.userPick)) ? Number(session.userPick) : null;
+  const oppPick = Number.isFinite(Number(session.opponentPick)) ? Number(session.opponentPick) : null;
+  const hostCorrect = hostPick !== null && hostPick === correct;
+  const oppCorrect = oppPick !== null && oppPick === correct;
+
+  let hostResult = "tie";
+  let oppResult = "tie";
+
+  if (hostCorrect && !oppCorrect) {
+    hostResult = "win";
+    oppResult = "lose";
+  } else if (!hostCorrect && oppCorrect) {
+    hostResult = "lose";
+    oppResult = "win";
+  } else if (hostCorrect && oppCorrect) {
+    const hAt = Number(session.userLockedAt || 0);
+    const oAt = Number(session.opponentLockedAt || 0);
+    if (hAt && oAt) {
+      if (hAt < oAt) {
+        hostResult = "win";
+        oppResult = "lose";
+      } else if (hAt > oAt) {
+        hostResult = "lose";
+        oppResult = "win";
+      }
+    }
+  }
+
+  return { hostResult, oppResult, hostCorrect, oppCorrect };
+}
+
+async function finalizeSoloSession(client, sessionId, session, { reason = "completed" } = {}) {
+  const preMatch = !Array.isArray(session.choices) || !Number.isFinite(Number(session.correctIndex));
+  if (preMatch) {
+    await deleteTriviaSession(sessionId);
+    await clearActiveTriviaSessionId({ guildId: session.guildId, channelId: session.channelId, userId: session.userId });
+
+    const desc =
+      reason === "lobby-timeout"
+        ? "Lobby timed out before the run started."
+        : reason === "forfeit"
+          ? "You cancelled before starting."
+          : "Run cancelled before start.";
+
+    const e = new EmbedBuilder()
+      .setTitle("🧩 Trivia Results")
+      .setColor(Colors.INFO)
+      .setDescription(desc)
+      .addFields(
+        { name: "Mode", value: "Solo", inline: true },
+        { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
+        { name: "Category", value: String(session.category || "Any"), inline: true },
+        { name: "Rewards", value: "No rewards granted (run cancelled).", inline: false }
+      )
+      .setTimestamp();
+
+    try {
+      const { channel, msg } = await getSessionMessage(client, session);
+      if (channel) {
+        if (msg) await msg.edit({ embeds: [e], components: [] }).catch(() => {});
+        else await channel.send({ embeds: [e] }).catch(() => {});
+      }
+    } catch {}
+    return true;
+  }
+
+  const correct = session.correctIndex;
+  const userPick = Number.isFinite(Number(session.userPick)) ? Number(session.userPick) : null;
+  const userPickLetter = userPick === null ? "_none_" : `**${LETTERS[userPick] || "?"}**`;
+
+  const { result, userCorrect } = resolveSoloResult(session);
+  const noReward = reason === "forfeit" || reason === "lobby-timeout";
+  const reward = noReward ? { credits: 0, xp: 0 } : computeReward({ difficulty: session.difficulty, result, answeredBeforeAgent: false });
+
+  try {
+    if (reward.credits > 0) await addCredits(session.userId, reward.credits, `Trivia (solo ${session.difficulty}): ${result}`);
+  } catch {}
+  let xpRes = null;
+  try {
+    xpRes = await addGameXp(session.userId, reward.xp, { reason: `trivia:solo:${result}` });
+  } catch {}
+
+  try { await recordQuestEvent(session.userId, "trivia_runs", 1); } catch {}
+  try { if (result === "win") await recordQuestEvent(session.userId, "trivia_wins", 1); } catch {}
+
+  session.endedAt = Date.now();
+  session.endReason = reason;
+  await deleteTriviaSession(sessionId);
+  await clearActiveTriviaSessionId({ guildId: session.guildId, channelId: session.channelId, userId: session.userId });
+
+  const resultColor = result === "win" ? Colors.SUCCESS : Colors.ERROR;
+  const outcomeDescription =
+    reason === "forfeit"
+      ? "You forfeited the run."
+      : reason === "timeout"
+        ? (userCorrect ? "You answered correctly in time." : "Time expired.")
+        : userCorrect
+          ? "Correct."
+          : "Incorrect.";
+
+  const e = new EmbedBuilder()
+    .setTitle("🧩 Trivia Results")
+    .setColor(resultColor)
+    .setDescription(outcomeDescription)
+    .addFields(
+      { name: "Mode", value: "Solo", inline: true },
+      { name: "Category", value: String(session.category || "Any"), inline: true },
+      { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
+      { name: "Correct", value: `**${LETTERS[correct] || "?"}**`, inline: true },
+      { name: "Your Pick", value: userPickLetter, inline: true },
+      {
+        name: "Rewards",
+        value: noReward
+          ? "No rewards granted (run cancelled)."
+          : `+${reward.credits.toLocaleString()} Credits • +${reward.xp.toLocaleString()} XP`,
+        inline: false
+      }
+    )
+    .setTimestamp();
+
+  if (session.explanation) {
+    e.addFields({ name: "Why", value: String(session.explanation).slice(0, 400), inline: false });
+  }
+  if (xpRes?.granted?.length) {
+    const crates = xpRes.granted.slice(0, 3).map(g => `Lv ${g.level}: \`${g.crateId}\``).join("\n");
+    const more = xpRes.granted.length > 3 ? `\n...and ${xpRes.granted.length - 3} more.` : "";
+    e.addFields({ name: "Level Rewards", value: crates + more, inline: false });
+  }
+
+  try {
+    const { channel, msg } = await getSessionMessage(client, session);
+    if (channel) {
+      if (msg) await msg.edit({ embeds: [e], components: [] }).catch(() => {});
+      else await channel.send({ embeds: [e] }).catch(() => {});
+    }
+  } catch {}
+
+  return true;
+}
+
+async function finalizePvpSession(client, sessionId, session, { reason = "completed", actorUserId = null } = {}) {
+  const preMatch = !Array.isArray(session.choices) || !Number.isFinite(Number(session.correctIndex));
+  const hostId = String(session.userId || "");
+  const oppId = String(session.opponentUserId || "");
+
+  if (preMatch) {
+    await deleteTriviaSession(sessionId);
+    await clearActiveTriviaSessionId({ guildId: session.guildId, channelId: session.channelId, userId: hostId });
+    if (oppId) await clearActiveTriviaSessionId({ guildId: session.guildId, channelId: session.channelId, userId: oppId }).catch(() => {});
+
+    const desc =
+      reason === "declined"
+        ? `<@${oppId}> declined the challenge.`
+        : reason === "lobby-timeout"
+          ? "Lobby timed out before the match started."
+          : reason === "forfeit"
+            ? (actorUserId === oppId ? `<@${oppId}> forfeited before start.` : `<@${hostId}> cancelled before start.`)
+            : "Match cancelled before start.";
+
+    const e = new EmbedBuilder()
+      .setTitle("🧩 Trivia Results")
+      .setColor(Colors.INFO)
+      .setDescription(desc)
+      .addFields(
+        { name: "Mode", value: "Versus", inline: true },
+        { name: "Host", value: `<@${hostId}>`, inline: true },
+        { name: "Opponent", value: `<@${oppId}>`, inline: true },
+        { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
+        { name: "Category", value: String(session.category || "Any"), inline: true },
+        { name: "Rewards", value: "No rewards granted (match cancelled).", inline: false }
+      )
+      .setTimestamp();
+
+    try {
+      const { channel, msg } = await getSessionMessage(client, session);
+      if (channel) {
+        if (msg) await msg.edit({ embeds: [e], components: [] }).catch(() => {});
+        else await channel.send({ embeds: [e] }).catch(() => {});
+      }
+    } catch {}
+    return true;
+  }
+
+  const correct = session.correctIndex;
+  const hostPick = Number.isFinite(Number(session.userPick)) ? Number(session.userPick) : null;
+  const oppPick = Number.isFinite(Number(session.opponentPick)) ? Number(session.opponentPick) : null;
+
+  const noReward = reason === "forfeit" || reason === "lobby-timeout" || reason === "declined";
+  const resolved = resolvePvpResult(session);
+
+  const hostReward = noReward ? { credits: 0, xp: 0 } : computeReward({ difficulty: session.difficulty, result: resolved.hostResult, answeredBeforeAgent: false });
+  const oppReward = noReward ? { credits: 0, xp: 0 } : computeReward({ difficulty: session.difficulty, result: resolved.oppResult, answeredBeforeAgent: false });
+
+  try { if (hostReward.credits > 0) await addCredits(hostId, hostReward.credits, `Trivia (versus ${session.difficulty}): ${resolved.hostResult}`); } catch {}
+  try { if (oppReward.credits > 0) await addCredits(oppId, oppReward.credits, `Trivia (versus ${session.difficulty}): ${resolved.oppResult}`); } catch {}
+
+  let hostXp = null;
+  let oppXp = null;
+  try { hostXp = await addGameXp(hostId, hostReward.xp, { reason: `trivia:pvp:${resolved.hostResult}` }); } catch {}
+  try { oppXp = await addGameXp(oppId, oppReward.xp, { reason: `trivia:pvp:${resolved.oppResult}` }); } catch {}
+
+  try { await recordQuestEvent(hostId, "trivia_runs", 1); } catch {}
+  try { await recordQuestEvent(oppId, "trivia_runs", 1); } catch {}
+  try { if (resolved.hostResult === "win") await recordQuestEvent(hostId, "trivia_wins", 1); } catch {}
+  try { if (resolved.oppResult === "win") await recordQuestEvent(oppId, "trivia_wins", 1); } catch {}
+
+  session.endedAt = Date.now();
+  session.endReason = reason;
+  await deleteTriviaSession(sessionId);
+  await clearActiveTriviaSessionId({ guildId: session.guildId, channelId: session.channelId, userId: hostId });
+  if (oppId) await clearActiveTriviaSessionId({ guildId: session.guildId, channelId: session.channelId, userId: oppId }).catch(() => {});
+
+  const resultColor =
+    resolved.hostResult === "win" ? Colors.SUCCESS
+      : resolved.oppResult === "win" ? Colors.ERROR
+        : Colors.INFO;
+
+  const hostPickLetter = hostPick === null ? "_none_" : `**${LETTERS[hostPick] || "?"}**`;
+  const oppPickLetter = oppPick === null ? "_none_" : `**${LETTERS[oppPick] || "?"}**`;
+  const winnerLine =
+    reason === "forfeit"
+      ? `Forfeited by <@${actorUserId || "0"}>.`
+      : resolved.hostResult === "win"
+        ? `<@${hostId}> won.`
+        : resolved.oppResult === "win"
+          ? `<@${oppId}> won.`
+          : "It's a tie.";
+
+  const e = new EmbedBuilder()
+    .setTitle("🧩 Trivia Results")
+    .setColor(resultColor)
+    .setDescription(winnerLine)
+    .addFields(
+      { name: "Mode", value: "Versus", inline: true },
+      { name: "Difficulty", value: formatDifficulty(session.difficulty), inline: true },
+      { name: "Category", value: String(session.category || "Any"), inline: true },
+      { name: "Correct", value: `**${LETTERS[correct] || "?"}**`, inline: true },
+      { name: `<@${hostId}>`, value: hostPickLetter, inline: true },
+      { name: `<@${oppId}>`, value: oppPickLetter, inline: true },
+      {
+        name: "Rewards",
+        value: noReward
+          ? "No rewards granted (match cancelled)."
+          : [
+            `<@${hostId}>: +${hostReward.credits.toLocaleString()} Credits • +${hostReward.xp.toLocaleString()} XP`,
+            `<@${oppId}>: +${oppReward.credits.toLocaleString()} Credits • +${oppReward.xp.toLocaleString()} XP`
+          ].join("\n").slice(0, 1024),
+        inline: false
+      }
+    )
+    .setTimestamp();
+
+  if (session.explanation) {
+    e.addFields({ name: "Why", value: String(session.explanation).slice(0, 400), inline: false });
+  }
+
+  const hostRewards = hostXp?.granted?.length ? hostXp.granted : [];
+  const oppRewards = oppXp?.granted?.length ? oppXp.granted : [];
+  if (hostRewards.length) {
+    const crates = hostRewards.slice(0, 2).map(g => `Lv ${g.level}: \`${g.crateId}\``).join("\n");
+    const more = hostRewards.length > 2 ? `\n...and ${hostRewards.length - 2} more.` : "";
+    e.addFields({ name: "Level Rewards (Host)", value: crates + more, inline: false });
+  }
+  if (oppRewards.length) {
+    const crates = oppRewards.slice(0, 2).map(g => `Lv ${g.level}: \`${g.crateId}\``).join("\n");
+    const more = oppRewards.length > 2 ? `\n...and ${oppRewards.length - 2} more.` : "";
+    e.addFields({ name: "Level Rewards (Opponent)", value: crates + more, inline: false });
+  }
+
+  try {
+    const { channel, msg } = await getSessionMessage(client, session);
+    if (channel) {
+      if (msg) await msg.edit({ embeds: [e], components: [] }).catch(() => {});
+      else await channel.send({ embeds: [e] }).catch(() => {});
+    }
+  } catch {}
+
+  return true;
+}
+
+async function finalizeSession(client, sessionId, { reason = "completed", actorUserId = null } = {}) {
   const session = normalizeSession(await loadTriviaSession(sessionId));
   if (!session || session.endedAt) return false;
+
+  if (isSolo(session)) {
+    return await finalizeSoloSession(client, sessionId, session, { reason });
+  }
+  if (isPvp(session)) {
+    return await finalizePvpSession(client, sessionId, session, { reason, actorUserId });
+  }
 
   const preMatch = !Array.isArray(session.choices) || !Number.isFinite(Number(session.correctIndex));
   if (preMatch) {
@@ -977,7 +1498,7 @@ async function acquireTriviaAgents(mgr, { guildId, channelId, userId, requestedO
 
 export const data = new SlashCommandBuilder()
   .setName("trivia")
-  .setDescription("Play trivia against deployed agents")
+  .setDescription("Play trivia solo, versus players, or versus deployed agents")
   .addSubcommand(sub =>
     sub
       .setName("start")
@@ -1008,6 +1529,72 @@ export const data = new SlashCommandBuilder()
           .setMinValue(1)
           .setMaxValue(MAX_FLEET_OPPONENTS)
           .setRequired(false)
+      )
+      .addBooleanOption(o =>
+        o
+          .setName("public")
+          .setDescription("Post the match publicly in this channel (default true)")
+          .setRequired(false)
+      )
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName("solo")
+      .setDescription("Play a solo trivia run (no opponents)")
+      .addStringOption(o =>
+        o
+          .setName("difficulty")
+          .setDescription("Question difficulty")
+          .setRequired(false)
+          .addChoices(
+            { name: "Easy", value: "easy" },
+            { name: "Normal", value: "normal" },
+            { name: "Hard", value: "hard" },
+            { name: "Nightmare", value: "nightmare" }
+          )
+      )
+      .addStringOption(o =>
+        o
+          .setName("category")
+          .setDescription("Question category")
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addBooleanOption(o =>
+        o
+          .setName("public")
+          .setDescription("Post the run publicly in this channel (default true)")
+          .setRequired(false)
+      )
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName("versus")
+      .setDescription("Challenge another player to trivia")
+      .addUserOption(o =>
+        o
+          .setName("user")
+          .setDescription("Opponent (must accept)")
+          .setRequired(true)
+      )
+      .addStringOption(o =>
+        o
+          .setName("difficulty")
+          .setDescription("Question difficulty")
+          .setRequired(false)
+          .addChoices(
+            { name: "Easy", value: "easy" },
+            { name: "Normal", value: "normal" },
+            { name: "Hard", value: "hard" },
+            { name: "Nightmare", value: "nightmare" }
+          )
+      )
+      .addStringOption(o =>
+        o
+          .setName("category")
+          .setDescription("Question category")
+          .setRequired(false)
+          .setAutocomplete(true)
       )
       .addBooleanOption(o =>
         o
@@ -1087,7 +1674,7 @@ export default {
       if (!active) {
         return await replyError(interaction, "No Active Match", "You have no active trivia match in this channel.", true);
       }
-      await finalizeSession(interaction.client, String(active), { reason: "forfeit" });
+      await finalizeSession(interaction.client, String(active), { reason: "forfeit", actorUserId: interaction.user.id });
       return await interaction.editReply({
         embeds: [
           new EmbedBuilder()
@@ -1098,7 +1685,20 @@ export default {
       });
     }
 
-    await interaction.deferReply();
+    const isPublic = interaction.options.getBoolean("public");
+    const publicMode = isPublic === null ? true : Boolean(isPublic);
+
+    // Solo can be ephemeral. Versus/agent matches require public channel visibility.
+    if ((sub === "start" || sub === "fleet" || sub === "versus") && !publicMode) {
+      return await replyError(
+        interaction,
+        "Not Supported Yet",
+        "Private trivia matches are not supported for this mode.\nUse `public:true` for now.",
+        true
+      );
+    }
+
+    await interaction.deferReply({ flags: publicMode ? undefined : MessageFlags.Ephemeral });
 
     const existing = await getActiveTriviaSessionId({ guildId, channelId, userId: interaction.user.id });
     if (existing) {
@@ -1123,22 +1723,27 @@ export default {
       }
     }
 
-    const mgr = global.agentManager;
-    if (!mgr) {
-      return await replyError(interaction, "Agents Not Ready", formatAgentTextError("agents-not-ready"), true);
+    if (sub === "versus") {
+      const opponent = interaction.options.getUser("user", true);
+      if (!opponent || opponent.bot) {
+        return await replyError(interaction, "Invalid Opponent", "Pick a real user (not a bot).", true);
+      }
+      if (opponent.id === interaction.user.id) {
+        return await replyError(interaction, "Invalid Opponent", "You cannot challenge yourself.", true);
+      }
+      const oppActive = await getActiveTriviaSessionId({ guildId, channelId, userId: opponent.id });
+      if (oppActive) {
+        return await replyError(interaction, "Opponent Busy", "That user already has an active trivia match in this channel.", true);
+      }
     }
 
     const difficulty = interaction.options.getString("difficulty") || "normal";
     const category = interaction.options.getString("category") || "Any";
-    const isPublic = interaction.options.getBoolean("public");
-    const publicMode = isPublic === null ? true : Boolean(isPublic);
-    if (!publicMode) {
-      return await replyError(
-        interaction,
-        "Not Supported Yet",
-        "Private trivia matches are not supported yet.\nUse `/trivia start public:true` for now.",
-        true
-      );
+    if (sub === "start" || sub === "fleet") {
+      const mgr = global.agentManager;
+      if (!mgr) {
+        return await replyError(interaction, "Agents Not Ready", formatAgentTextError("agents-not-ready"), true);
+      }
     }
 
     const requested = sub === "fleet"
@@ -1146,12 +1751,15 @@ export default {
       : clampOpponents(interaction.options.getInteger("opponents") ?? 1, 1);
     const requestedOpponents = sub === "fleet" ? Math.max(MIN_FLEET_OPPONENTS, requested) : requested;
     const sessionId = makeTriviaSessionId();
+    const opponentUser = sub === "versus" ? interaction.options.getUser("user", true) : null;
 
     const session = normalizeSession({
       sessionId,
       guildId,
       channelId,
       userId: interaction.user.id,
+      opponentUserId: opponentUser?.id || null,
+      acceptedAt: null,
       difficulty,
       category: String(category || "Any"),
       prompt: null,
@@ -1162,15 +1770,19 @@ export default {
       stage: "lobby",
       expiresAt: null,
       revealedAt: null,
-      mode: requestedOpponents > 1 ? "fleet" : "duel",
-      opponents: requestedOpponents,
+      mode: sub === "solo" ? "solo" : sub === "versus" ? "pvp" : requestedOpponents > 1 ? "fleet" : "duel",
+      opponents: sub === "solo" ? 0 : sub === "versus" ? 1 : requestedOpponents,
       agents: [],
       agentLeases: [],
       userPick: null,
       userLockedAt: null,
+      opponentPick: null,
+      opponentLockedAt: null,
       messageId: null,
-      publicMode: true,
-      startNote: "Use dropdowns to configure this run."
+      publicMode,
+      startNote: sub === "versus"
+        ? `Waiting for <@${opponentUser?.id}> to accept.`
+        : "Use dropdowns to configure this run."
     });
 
     try {
@@ -1222,12 +1834,12 @@ export async function handleSelect(interaction) {
     await interaction.reply({ content: "This match expired. Run `/trivia start` again.", flags: MessageFlags.Ephemeral });
     return true;
   }
-  if (interaction.user.id !== session.userId) {
-    await interaction.reply({ content: "This match belongs to another user.", flags: MessageFlags.Ephemeral });
-    return true;
-  }
 
   if (area === "cfg") {
+    if (interaction.user.id !== session.userId) {
+      await interaction.reply({ content: "Only the host can change match settings.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
     if (session.stage !== "lobby") {
       await interaction.reply({ content: "Setup is locked after Start.", flags: MessageFlags.Ephemeral });
       return true;
@@ -1266,18 +1878,25 @@ export async function handleSelect(interaction) {
     return true;
   }
 
+  if (!canUseMatchUi(session, interaction.user.id)) {
+    await interaction.reply({ content: "This match belongs to another user.", flags: MessageFlags.Ephemeral });
+    return true;
+  }
+
   if (session.stage !== "question") {
     await interaction.reply({ content: "Not ready yet. Press Start first.", flags: MessageFlags.Ephemeral });
     return true;
   }
-  if (session.userLockedAt) {
+  const isOpponent = isPvp(session) && interaction.user.id === session.opponentUserId;
+  if (isOpponent ? session.opponentLockedAt : session.userLockedAt) {
     await interaction.reply({ content: "Already locked in.", flags: MessageFlags.Ephemeral });
     return true;
   }
   const v = interaction.values?.[0];
   const maxIndex = Math.max(0, (session.choices?.length || 4) - 1);
   const pick = Math.max(0, Math.min(maxIndex, Math.trunc(Number(v))));
-  session.userPick = pick;
+  if (isOpponent) session.opponentPick = pick;
+  else session.userPick = pick;
   await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
 
   const embed = buildQuestionEmbed({ session });
@@ -1300,7 +1919,7 @@ export async function handleButton(interaction) {
     await interaction.reply({ content: "This match expired. Run `/trivia start` again.", flags: MessageFlags.Ephemeral });
     return true;
   }
-  if (interaction.user.id !== session.userId) {
+  if (!canUseMatchUi(session, interaction.user.id)) {
     await interaction.reply({ content: "This match belongs to another user.", flags: MessageFlags.Ephemeral });
     return true;
   }
@@ -1315,9 +1934,111 @@ export async function handleButton(interaction) {
     return true;
   }
 
+  if (action === "accept" || action === "decline") {
+    if (!isPvp(session)) {
+      await interaction.reply({ content: "This is not a versus match.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+    if (session.stage !== "lobby") {
+      await interaction.reply({ content: "This match already started.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+    if (interaction.user.id !== session.opponentUserId) {
+      await interaction.reply({ content: "Only the challenged opponent can do that.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+
+    if (action === "accept") {
+      if (session.acceptedAt) {
+        await interaction.reply({ content: "Already accepted.", flags: MessageFlags.Ephemeral });
+        return true;
+      }
+      const oppActive = await getActiveTriviaSessionId({
+        guildId: session.guildId,
+        channelId: session.channelId,
+        userId: session.opponentUserId
+      });
+      if (oppActive) {
+        await interaction.reply({ content: "You already have an active trivia match in this channel.", flags: MessageFlags.Ephemeral });
+        return true;
+      }
+
+      session.acceptedAt = Date.now();
+      session.startNote = "✅ Opponent accepted. Host can press Start.";
+      await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
+      await setActiveTriviaSessionId({
+        guildId: session.guildId,
+        channelId: session.channelId,
+        userId: session.opponentUserId,
+        sessionId,
+        ttlSeconds: SESSION_TTL_SECONDS
+      });
+
+      await interaction.update({
+        embeds: [buildLobbyEmbed(session)],
+        components: buildLobbyComponents(sessionId, session, { disabled: false })
+      });
+      return true;
+    }
+
+    await interaction.deferUpdate();
+    await finalizeSession(interaction.client, sessionId, { reason: "declined", actorUserId: interaction.user.id });
+    return true;
+  }
+
   if (action === "start") {
     if (session.stage !== "lobby") {
       await interaction.reply({ content: "Already started.", flags: MessageFlags.Ephemeral });
+      return true;
+    }
+
+    if (isPvp(session)) {
+      if (interaction.user.id !== session.userId) {
+        await interaction.reply({ content: "Only the host can start.", flags: MessageFlags.Ephemeral });
+        return true;
+      }
+      if (!session.acceptedAt) {
+        await interaction.reply({ content: "Waiting for the opponent to accept.", flags: MessageFlags.Ephemeral });
+        return true;
+      }
+      const prep = prepareSessionForNonAgentMatch(session);
+      if (!prep.ok) {
+        const msg = prep.reason === "no-questions"
+          ? "No trivia questions are available for the selected category/difficulty."
+          : "Unable to start this match.";
+        await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
+        await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+        return true;
+      }
+      session.stage = "countdown";
+      await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
+      await interaction.update({
+        embeds: [buildLobbyEmbed(session)],
+        components: buildLobbyComponents(sessionId, session, { disabled: true })
+      });
+      await runCountdown(interaction.client, sessionId);
+      await showQuestion(interaction.client, sessionId);
+      return true;
+    }
+
+    if (isSolo(session)) {
+      const prep = prepareSessionForNonAgentMatch(session);
+      if (!prep.ok) {
+        const msg = prep.reason === "no-questions"
+          ? "No trivia questions are available for the selected category/difficulty."
+          : "Unable to start this run.";
+        await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
+        await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+        return true;
+      }
+      session.stage = "countdown";
+      await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
+      await interaction.update({
+        embeds: [buildLobbyEmbed(session)],
+        components: buildLobbyComponents(sessionId, session, { disabled: true })
+      });
+      await runCountdown(interaction.client, sessionId);
+      await showQuestion(interaction.client, sessionId);
       return true;
     }
 
@@ -1366,7 +2087,7 @@ export async function handleButton(interaction) {
       embeds: [new EmbedBuilder().setColor(Colors.INFO).setTitle("Cancelled").setDescription("Ending match…")],
       components: []
     });
-    await finalizeSession(interaction.client, sessionId, { reason: "forfeit" });
+    await finalizeSession(interaction.client, sessionId, { reason: "forfeit", actorUserId: interaction.user.id });
     return true;
   }
 
@@ -1375,22 +2096,43 @@ export async function handleButton(interaction) {
       await interaction.reply({ content: "Press Start first.", flags: MessageFlags.Ephemeral });
       return true;
     }
-    if (session.userLockedAt) {
+    const isOpponent = isPvp(session) && interaction.user.id === session.opponentUserId;
+    const actorLockedAt = isOpponent ? session.opponentLockedAt : session.userLockedAt;
+    const actorPick = isOpponent ? session.opponentPick : session.userPick;
+    if (actorLockedAt) {
       await interaction.reply({ content: "Already locked in.", flags: MessageFlags.Ephemeral });
       return true;
     }
-    if (session.userPick === null || session.userPick === undefined) {
+    if (actorPick === null || actorPick === undefined) {
       await interaction.reply({ content: "Pick an option first.", flags: MessageFlags.Ephemeral });
       return true;
     }
-    session.userLockedAt = Date.now();
+    if (isOpponent) session.opponentLockedAt = Date.now();
+    else session.userLockedAt = Date.now();
     await saveTriviaSession(sessionId, session, SESSION_TTL_SECONDS);
 
     const embed = buildQuestionEmbed({ session });
     await interaction.update({
       embeds: [embed],
-      components: buildAnswerComponents(sessionId, session.choices?.length || 4, { disabled: true })
+      components: buildAnswerComponents(
+        sessionId,
+        session.choices?.length || 4,
+        { disabled: isAgentMatch(session) || isSolo(session) ? true : false }
+      )
     });
+
+    if (isSolo(session)) {
+      await finalizeSession(interaction.client, sessionId, { reason: "completed", actorUserId: interaction.user.id });
+      return true;
+    }
+
+    if (isPvp(session)) {
+      const updated = normalizeSession(await loadTriviaSession(sessionId));
+      if (updated?.userLockedAt && updated?.opponentLockedAt) {
+        await finalizeSession(interaction.client, sessionId, { reason: "completed", actorUserId: interaction.user.id });
+      }
+      return true;
+    }
 
     await maybeRunAgentAnswer(interaction.client, sessionId);
     const updated = normalizeSession(await loadTriviaSession(sessionId));

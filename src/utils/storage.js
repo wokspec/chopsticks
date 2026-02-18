@@ -187,6 +187,8 @@ function normalizeData(input) {
   out.game.theme = (gameTheme === "neo" || gameTheme === "ember" || gameTheme === "arcane") ? gameTheme : "neo";
   if (!isPlainObject(out.levels)) out.levels = {};
   if (!isPlainObject(out.levels.roleRewards)) out.levels.roleRewards = {};
+  if (typeof out.levels.levelupChannelId !== "string") out.levels.levelupChannelId = null;
+  if (typeof out.levels.levelupMessage !== "string") out.levels.levelupMessage = null;
   if (!isPlainObject(out.starboard)) out.starboard = {};
   if (typeof out.starboard.enabled !== "boolean") out.starboard.enabled = false;
   if (typeof out.starboard.channelId !== "string") out.starboard.channelId = null;

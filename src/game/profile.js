@@ -110,7 +110,7 @@ export async function addGameXp(userId, baseAmount, { reason = "unknown", multip
     };
     if (result.leveledUp) {
       // Best-effort sync: update configured guild level reward roles on level-up.
-      void syncUserLevelRewardsAcrossGuilds(userId, nextLevel).catch(() => {});
+      void syncUserLevelRewardsAcrossGuilds(userId, nextLevel, { fromLevel: beforeLevel, granted }).catch(() => {});
     }
     return result;
   } catch (err) {

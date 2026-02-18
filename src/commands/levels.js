@@ -59,14 +59,31 @@ export const data = new SlashCommandBuilder()
           .setDescription("Force role reward sync for a member")
           .addUserOption(o => o.setName("user").setDescription("Member to sync (default: you)").setRequired(false))
       )
+  )
+  .addSubcommandGroup(group =>
+    group
+      .setName("config")
+      .setDescription("Configure level-up notifications")
+      .addSubcommand(sub =>
+        sub
+          .setName("levelup_channel")
+          .setDescription("Set the channel for level-up embeds")
+          .addChannelOption(o => o.setName("channel").setDescription("Text channel to send embeds").setRequired(true))
+      )
+      .addSubcommand(sub =>
+        sub
+          .setName("levelup_message")
+          .setDescription("Set the level-up message template (use {user}, {fromLevel}, {toLevel})")
+          .addStringOption(o => o.setName("message").setDescription("Message template").setRequired(true))
+      )
   );
 
 export async function execute(interaction) {
   const group = interaction.options.getSubcommandGroup(true);
   const sub = interaction.options.getSubcommand(true);
-  if (group !== "rewards") {
+  if (group !== "rewards" && group !== "config") {
     await interaction.reply({
-      embeds: [buildEmbed("Unsupported Action", "Only `rewards` actions are currently supported.", Colors.WARNING)],
+      embeds: [buildEmbed("Unsupported Action", "Supported actions: `rewards`, `config`.", Colors.WARNING)],
       flags: MessageFlags.Ephemeral
     });
     return;
@@ -78,6 +95,23 @@ export async function execute(interaction) {
   const guildData = await loadGuildData(guildId);
   guildData.levels ??= {};
   guildData.levels.roleRewards ??= {};
+
+  if (group === "config") {
+    if (sub === "levelup_channel") {
+      const channel = interaction.options.getChannel("channel", true);
+      guildData.levels.levelupChannelId = channel?.id || null;
+      await saveGuildData(guildId, guildData);
+      await interaction.editReply({ embeds: [buildEmbed("Level Up Channel Set", `Level-up embeds will be posted in ${channel}.`, Colors.SUCCESS)] });
+      return;
+    }
+    if (sub === "levelup_message") {
+      const msg = interaction.options.getString("message", true);
+      guildData.levels.levelupMessage = String(msg || "");
+      await saveGuildData(guildId, guildData);
+      await interaction.editReply({ embeds: [buildEmbed("Level Up Message Set", `Custom level-up message template saved. Use {user}, {fromLevel}, {toLevel}.`, Colors.SUCCESS)] });
+      return;
+    }
+  }
 
   if (sub === "add") {
     const level = interaction.options.getInteger("level", true);

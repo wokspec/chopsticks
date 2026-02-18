@@ -17,8 +17,8 @@ services:
       # Health server port
       - HEALTH_SERVER_PORT=8080
       # Database connection details (from docker-compose.stack.yml)
-      - POSTGRES_URL=postgresql://chopsticks:chopsticks@postgres:5432/chopsticks
-      - DATABASE_URL=postgresql://chopsticks:chopsticks@postgres:5432/chopsticks
+      - POSTGRES_URL=postgresql://chopsticks:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-chopsticks}
+      - DATABASE_URL=postgresql://chopsticks:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-chopsticks}
       # Redis connection details (from docker-compose.stack.yml)
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -37,11 +37,17 @@ services:
     ports:
       - "8080:8080" # Expose health server
       - "3002:3002" # Expose Development API
-      - "8787:8787" # Expose Agent Control WebSocket (so agent-runner can connect)
+      - "127.0.0.1:8787:8787" # Expose Agent Control WebSocket to localhost only (agent-runner uses internal network)
     depends_on:
       - postgres
       - redis
       - lavalink
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8080/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
       # Voice services are optional and can be layered via docker-compose.voice.yml
     restart: unless-stopped
     volumes:
@@ -59,8 +65,8 @@ services:
       # Storage driver
       - STORAGE_DRIVER=postgres
       # Database connection details
-      - POSTGRES_URL=postgresql://chopsticks:chopsticks@postgres:5432/chopsticks
-      - DATABASE_URL=postgresql://chopsticks:chopsticks@postgres:5432/chopsticks
+      - POSTGRES_URL=postgresql://chopsticks:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-chopsticks}
+      - DATABASE_URL=postgresql://chopsticks:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-chopsticks}
       # Redis connection details
       - REDIS_HOST=redis
       - REDIS_PORT=6379

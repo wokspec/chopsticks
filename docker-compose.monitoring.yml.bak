@@ -15,7 +15,7 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     ports:
-      - "127.0.0.1:9092:9090"
+      - "9090:9090"
     networks:
       - chopsticks
     restart: unless-stopped

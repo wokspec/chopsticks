@@ -1,5 +1,6 @@
-import { PermissionFlagsBits } from "discord.js";
+import { PermissionFlagsBits, ChannelType } from "discord.js";
 import { loadGuildData } from "../utils/storage.js";
+import { makeEmbed, Colors } from "../utils/discordOutput.js";
 
 const LEVEL_REWARD_SYNC_COOLDOWN_MS = 30_000;
 const lastSyncByMember = new Map();
@@ -135,7 +136,7 @@ export async function maybeSyncMemberLevelRoleRewards(member, { guildData, level
   return await syncMemberLevelRoleRewards(member, { guildData, level });
 }
 
-export async function syncUserLevelRewardsAcrossGuilds(userId, level) {
+export async function syncUserLevelRewardsAcrossGuilds(userId, level, opts = {}) {
   const client = global.client;
   if (!client?.guilds?.cache) return { ok: false, synced: 0 };
 
@@ -156,6 +157,36 @@ export async function syncUserLevelRewardsAcrossGuilds(userId, level) {
       if (!member) continue;
 
       await applyLevelRoleRewardsToMember(member, { level, guildData });
+      // Send optional configured level-up embed if set in guild data
+      try {
+        const lvlCfg = guildData?.levels ?? {};
+        const channelId = lvlCfg.levelupChannelId;
+        const template = lvlCfg.levelupMessage;
+        if (channelId) {
+          const channel = guild.channels.cache.get(channelId) || await guild.channels.fetch(channelId).catch(() => null);
+          if (channel && typeof channel.send === 'function') {
+            const fromLevel = opts?.fromLevel ?? null;
+            const granted = Array.isArray(opts?.granted) ? opts.granted : [];
+            const description = template
+              ? String(template)
+                  .replace(/\{user\}/g, `<@${userId}>`)
+                  .replace(/\{fromLevel\}/g, String(fromLevel ?? ""))
+                  .replace(/\{toLevel\}/g, String(level))
+              : `${member.displayName} leveled up to level ${level}!`;
+            const fields = [];
+            fields.push({ name: "Level", value: `${fromLevel ?? "?"} → ${level}`, inline: true });
+            if (granted.length) {
+              const crates = granted.slice(0, 3).map(g => `Lv ${g.level}: \`${g.crateId}\``).join("\n");
+              const more = granted.length > 3 ? `\n...and ${granted.length - 3} more.` : "";
+              fields.push({ name: "Rewards", value: crates + more, inline: false });
+            }
+            const eb = makeEmbed("Level Up!", description, fields, null, member.displayAvatarURL?.(), Colors.SUCCESS);
+            await channel.send({ embeds: [eb] }).catch(() => {});
+          }
+        }
+      } catch (err) {
+        // Never let notification failures break sync
+      }
       synced += 1;
     } catch {}
   }

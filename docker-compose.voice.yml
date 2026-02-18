@@ -1,7 +1,7 @@
 services:
   ollama:
     image: ollama/ollama:latest
-    container_name: chopsticks-ollama
+    container_name: "${COMPOSE_PROJECT_NAME:-chopsticks}-ollama"
     ports:
       - "11434:11434"
     volumes:
@@ -11,7 +11,7 @@ services:
   voice-llm:
     build:
       context: ./services/voice-llm
-    container_name: chopsticks-voice-llm
+    container_name: "${COMPOSE_PROJECT_NAME:-chopsticks}-voice-llm"
     environment:
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=${VOICE_OLLAMA_MODEL:-llama3.1:8b}
@@ -25,7 +25,7 @@ services:
   voice-stt:
     build:
       context: ./services/voice-stt
-    container_name: chopsticks-voice-stt
+    container_name: "${COMPOSE_PROJECT_NAME:-chopsticks}-voice-stt"
     environment:
       - WHISPER_MODEL=${VOICE_WHISPER_MODEL:-small}
       - WHISPER_DEVICE=${VOICE_WHISPER_DEVICE:-cpu}
@@ -38,7 +38,7 @@ services:
   voice-tts:
     build:
       context: ./services/voice-tts
-    container_name: chopsticks-voice-tts
+    container_name: "${COMPOSE_PROJECT_NAME:-chopsticks}-voice-tts"
     environment:
       - PIPER_BIN=/piper/piper
       - PIPER_MODEL=/piper/model.onnx

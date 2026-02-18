@@ -1,10 +1,10 @@
 services:
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4
-    container_name: lavalink-chopsticks
+    container_name: "${COMPOSE_PROJECT_NAME:-chopsticks}-lavalink"
     restart: unless-stopped
     ports:
       - "2333:2333"
     volumes:
-      - ./lavalink/config/application.yml:/opt/Lavalink/application.yml:ro
-      - ./lavalink/config/plugins:/opt/Lavalink/plugins:ro
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
+      - ./lavalink/plugins:/opt/Lavalink/plugins:ro

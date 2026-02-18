@@ -7,12 +7,6 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
   postgres:
     image: postgres:16-alpine
@@ -26,12 +20,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chopsticks} -d ${POSTGRES_DB:-chopsticks} || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4
@@ -39,19 +27,16 @@ services:
     ports:
       - "2333:2333"
     volumes:
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
-      - ./lavalink/plugins:/opt/Lavalink/plugins:ro
+      - ./lavalink/config/application.yml:/opt/Lavalink/application.yml:ro
+      - ./lavalink/config/plugins:/opt/Lavalink/plugins:ro
 
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:9092:9090"
+      - "9090:9090"
     volumes:
       - ./tools/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    networks:
-      - default
-      - woksite_wok_network
 
   grafana:
     image: grafana/grafana:latest
@@ -132,9 +117,6 @@ services:
     depends_on:
       - bot
       - dashboard
-    networks:
-      - default
-      - woksite_wok_network
 
 volumes:
   redis_data:
@@ -142,8 +124,3 @@ volumes:
   grafana_data:
   caddy_data:
   caddy_config:
-
-networks:
-  woksite_wok_network:
-    external:
-      name: woksite_wok_network

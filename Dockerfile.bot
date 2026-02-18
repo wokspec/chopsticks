@@ -37,7 +37,7 @@ COPY . .
 RUN set -eux; \
     addgroup --system app || true; \
     adduser --system --ingroup app --uid 1000 app || true; \
-    chown -R app:app /app
+    id -u app >/dev/null 2>&1 && chown -R app:app /app || true
 
 USER app
 

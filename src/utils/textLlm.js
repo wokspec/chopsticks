@@ -1,5 +1,6 @@
 // src/utils/textLlm.js
-// Optional local LLM client. Works with services/voice-llm (POST /generate).
+// LLM client for the voice-llm microservice.
+// Supports multi-backend fallback: anthropic → openai → ollama (configured in voice-llm service).
 
 function isValidHttpUrl(s) {
   try {
@@ -26,7 +27,7 @@ export async function generateText({ prompt, system = "" } = {}) {
   const body = JSON.stringify({ prompt: String(prompt || ""), system: String(system || "") });
 
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 12_000);
+  const t = setTimeout(() => controller.abort(), 15_000);
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -36,13 +37,17 @@ export async function generateText({ prompt, system = "" } = {}) {
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`llm-failed:${res.status}:${text.slice(0, 120)}`);
+      const data = await res.json().catch(() => null);
+      const detail = data?.backends_tried
+        ? data.backends_tried.map(b => `${b.backend||b.error}:${b.error||""}`).join("; ")
+        : await res.text().catch(() => "");
+      throw new Error(`llm-failed:${res.status}:${detail.slice(0, 160)}`);
     }
 
     const data = await res.json().catch(() => null);
     const text = String(data?.text || data?.response || "").trim();
     if (!text) throw new Error("llm-empty");
+    // data.backend is the name of whichever backend actually responded
     return text;
   } finally {
     clearTimeout(t);

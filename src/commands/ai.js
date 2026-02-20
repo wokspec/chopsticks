@@ -144,6 +144,10 @@ export const data = new SlashCommandBuilder()
       .setDescription("Show AI features, current provider, and quick setup guide")
   )
   .addSubcommand(sub =>
+    sub.setName("stats")
+      .setDescription("Show AI usage statistics for this server")
+  )
+  .addSubcommand(sub =>
     sub.setName("summarize")
       .setDescription("Summarize recent channel messages using AI")
       .addIntegerOption(o =>
@@ -231,6 +235,7 @@ export async function execute(interaction) {
   if (sub === "translate")    return handleTranslate(interaction);
   if (sub === "moderate")     return handleModerate(interaction);
   if (sub === "help")         return handleHelp(interaction);
+  if (sub === "stats")        return handleStats(interaction);
 }
 
 // ── /ai chat ─────────────────────────────────────────────────────────────────
@@ -728,6 +733,39 @@ async function handleHelp(interaction) {
       },
     )
     .setFooter({ text: "Your API key is encrypted and never shared." });
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+// ── /ai stats ─────────────────────────────────────────────────────────────────
+import { getPool } from "../utils/storage_pg.js";
+
+async function handleStats(interaction) {
+  await interaction.deferReply({ ephemeral: false });
+  const guildId = interaction.guildId;
+
+  let guildConfig = { provider: "none" };
+  try { guildConfig = await getGuildAiConfig(guildId); } catch {}
+
+  // Count unique users who have linked API keys in this guild
+  let linkedUsersCount = 0;
+  try {
+    const res = await getPool().query("SELECT data FROM guild_settings WHERE guild_id=$1", [guildId]);
+    const data = res.rows[0]?.data ?? {};
+    const tokens = data.ai_tokens ?? {};
+    linkedUsersCount = Object.keys(tokens).length;
+  } catch {}
+
+  const embed = new EmbedBuilder()
+    .setTitle("📊 AI Usage Stats")
+    .setColor(0x5865F2)
+    .addFields(
+      { name: "Guild Provider", value: guildConfig.provider || "none", inline: true },
+      { name: "Guild Model", value: guildConfig.model || "default", inline: true },
+      { name: "Users with Linked Keys", value: String(linkedUsersCount), inline: true },
+      { name: "Persona Active", value: guildConfig.persona ? "✅ Yes" : "❌ No", inline: true },
+    )
+    .setFooter({ text: "Use /ai set-provider to configure AI for this server" });
 
   await interaction.editReply({ embeds: [embed] });
 }

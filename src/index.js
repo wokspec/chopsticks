@@ -1020,8 +1020,8 @@ setInterval(async () => {
 // Birthday & Events reminder scheduler — runs every hour
 setInterval(async () => {
   try {
-    const { query } = await import("./utils/db.js");
-    const res = await query("SELECT guild_id, data FROM guild_settings WHERE data IS NOT NULL");
+    const { getPool } = await import("./utils/storage_pg.js");
+    const res = await getPool().query("SELECT guild_id, data FROM guild_settings WHERE data IS NOT NULL");
     const now = new Date();
     const todayMD = `${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
 

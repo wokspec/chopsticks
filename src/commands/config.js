@@ -10,7 +10,8 @@ import {
   setCategoryEnabled,
   listCommandSettings
 } from "../utils/permissions.js";
-import { replyEmbed, replyEmbedWithJson } from "../utils/discordOutput.js";
+import { replyEmbed, replyEmbedWithJson, replySuccess, replyError } from "../utils/discordOutput.js";
+import { getPool } from "../utils/storage_pg.js";
 
 export const meta = {
   guildOnly: true,
@@ -71,6 +72,23 @@ export const data = new SlashCommandBuilder()
   .addSubcommand(sub =>
     sub.setName("settings").setDescription("Show command settings")
   )
+  .addSubcommand(sub =>
+    sub.setName("set-channel")
+      .setDescription("Set a special-purpose channel for this server")
+      .addStringOption(o =>
+        o.setName("type")
+          .setDescription("Channel type to configure")
+          .setRequired(true)
+          .addChoices(
+            { name: "suggestions", value: "suggestionChannelId" },
+            { name: "birthday-announcements", value: "birthdayChannelId" },
+            { name: "events-announcements", value: "eventChannelId" }
+          )
+      )
+      .addChannelOption(o =>
+        o.setName("channel").setDescription("The channel to assign").setRequired(true)
+      )
+  )
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
@@ -103,6 +121,19 @@ export async function execute(interaction) {
     const enabled = interaction.options.getBoolean("enabled", true);
     await setCategoryEnabled(guildId, category, enabled);
     await replyEmbed(interaction, "Category status", `${category} ${enabled ? "enabled" : "disabled"}`);
+    return;
+  }
+
+  if (sub === "set-channel") {
+    const type = interaction.options.getString("type", true);
+    const channel = interaction.options.getChannel("channel", true);
+      await getPool().query(
+      `INSERT INTO guild_settings(guild_id, data) VALUES($1, $2)
+       ON CONFLICT(guild_id) DO UPDATE SET data = guild_settings.data || $2::jsonb`,
+      [interaction.guildId, JSON.stringify({ [type]: channel.id })]
+    );
+    const typeLabel = { suggestionChannelId: "Suggestions", birthdayChannelId: "Birthday Announcements", eventChannelId: "Events Announcements" }[type] || type;
+    await replySuccess(interaction, `${typeLabel} channel set to ${channel}.`);
     return;
   }
 

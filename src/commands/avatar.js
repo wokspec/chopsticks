@@ -1,5 +1,10 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js";
 
+export const meta = {
+  category: "util",
+  guildOnly: false,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("avatar")
   .setDescription("Show user avatar")

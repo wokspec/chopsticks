@@ -25,7 +25,8 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand(s =>
     s.setName("list").setDescription("List custom commands")
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand();

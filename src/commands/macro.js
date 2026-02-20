@@ -25,7 +25,8 @@ export const data = new SlashCommandBuilder()
       .setDescription("Delete a macro")
       .addStringOption(o => o.setName("name").setDescription("Name").setRequired(true))
   )
-  .addSubcommand(s => s.setName("list").setDescription("List macros"));
+  .addSubcommand(s => s.setName("list").setDescription("List macros"))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 function parseSteps(input) {
   return String(input)

@@ -16,7 +16,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false))
   .addIntegerOption(o =>
     o.setName("delete_days").setDescription("Delete message days (0-7)").setMinValue(0).setMaxValue(7)
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers);
 
 export async function execute(interaction) {
   const user = interaction.options.getUser("user", true);

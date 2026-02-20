@@ -79,7 +79,8 @@ export const data = new SlashCommandBuilder()
           .setRequired(false)
           .addChoices(...actionChoices())
       )
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 function buildStatusEmbed(cfg) {
   const enabledEvents = MOD_LOG_ACTIONS.filter(action => cfg.events[action] !== false);

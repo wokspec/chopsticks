@@ -14,6 +14,11 @@ const answers = [
   "Very doubtful."
 ];
 
+export const meta = {
+  category: "fun",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("8ball")
   .setDescription("Ask the magic 8-ball")

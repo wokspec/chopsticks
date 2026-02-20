@@ -25,7 +25,8 @@ export const data = new SlashCommandBuilder()
       .setDescription("Remove a role from a user")
       .addUserOption(o => o.setName("user").setDescription("User").setRequired(true))
       .addRoleOption(o => o.setName("role").setDescription("Role").setRequired(true))
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles);
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand();

@@ -10,7 +10,8 @@ export const meta = {
 
 export const data = new SlashCommandBuilder()
   .setName("unlock")
-  .setDescription("Unlock the current channel");
+  .setDescription("Unlock the current channel")
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels);
 
 export async function execute(interaction) {
   if (!interaction.inGuild()) return;

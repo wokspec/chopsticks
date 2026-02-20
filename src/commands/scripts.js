@@ -98,7 +98,8 @@ export const data = new SlashCommandBuilder()
           .setRequired(false)
       )
       .addUserOption(o => o.setName("target_user").setDescription("Optional target user context").setRequired(false))
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const guildId = interaction.guildId;

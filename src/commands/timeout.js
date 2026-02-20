@@ -19,7 +19,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false))
   .addBooleanOption(o =>
     o.setName("notify_user").setDescription("Attempt to DM user about timeout")
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
 
 export async function execute(interaction) {
   const user = interaction.options.getUser("user", true);

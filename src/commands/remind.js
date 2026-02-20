@@ -1,6 +1,11 @@
 import { SlashCommandBuilder, MessageFlags } from "discord.js";
 import { schedule } from "../utils/scheduler.js";
 
+export const meta = {
+  category: "tools",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("remind")
   .setDescription("Set a reminder")

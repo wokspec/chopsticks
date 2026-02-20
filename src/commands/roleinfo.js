@@ -1,5 +1,10 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js";
 
+export const meta = {
+  category: "util",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("roleinfo")
   .setDescription("Show role info")

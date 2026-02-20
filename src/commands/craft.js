@@ -87,6 +87,11 @@ function selectedFromMessage(interaction) {
   return m?.[1] || null;
 }
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("craft")
   .setDescription("Craft items from recipes (interactive)")

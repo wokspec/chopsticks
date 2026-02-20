@@ -12,6 +12,11 @@ import { recordQuestEvent } from "../game/quests.js";
 
 const GATHER_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("gather")

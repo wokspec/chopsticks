@@ -8,6 +8,11 @@ import { maybeBuildGuildFunLine } from "../fun/integrations.js";
 import { addGameXp } from "../game/profile.js";
 import { getMultiplier } from "../game/buffs.js";
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("daily")
   .setDescription("Claim your daily credits reward");

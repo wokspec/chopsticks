@@ -3,6 +3,11 @@ import { SlashCommandBuilder } from "discord.js";
 import { makeEmbed, Colors } from "../utils/discordOutput.js";
 import { transferCredits } from "../economy/wallet.js";
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("pay")
   .setDescription("Transfer credits to another user")

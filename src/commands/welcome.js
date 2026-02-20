@@ -3,6 +3,7 @@ import { loadGuildData, saveGuildData } from "../utils/storage.js";
 import { Colors } from "../utils/discordOutput.js";
 
 export const meta = {
+  category: "admin",
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild]
 };
@@ -23,7 +24,8 @@ export const data = new SlashCommandBuilder()
       .addStringOption(o => o.setName("text").setDescription("Message with {user}").setRequired(true))
   )
   .addSubcommand(s => s.setName("preview").setDescription("Preview current welcome configuration"))
-  .addSubcommand(s => s.setName("disable").setDescription("Disable welcome"));
+  .addSubcommand(s => s.setName("disable").setDescription("Disable welcome"))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 function buildWelcomeEmbed(title, description, color = Colors.INFO) {
   return {

@@ -1,6 +1,11 @@
 import { SlashCommandBuilder, MessageFlags } from "discord.js";
 import { replyEmbed } from "../utils/discordOutput.js";
 
+export const meta = {
+  category: "util",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("echo")
   .setDescription("Echo text")

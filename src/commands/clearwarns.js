@@ -12,7 +12,8 @@ export const meta = {
 export const data = new SlashCommandBuilder()
   .setName("clearwarns")
   .setDescription("Clear warnings for a user")
-  .addUserOption(o => o.setName("user").setDescription("User").setRequired(true));
+  .addUserOption(o => o.setName("user").setDescription("User").setRequired(true))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
 
 export async function execute(interaction) {
   const user = interaction.options.getUser("user", true);

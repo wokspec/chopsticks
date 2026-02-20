@@ -11,6 +11,11 @@ import { Colors } from "../utils/discordOutput.js";
 
 const UI_PREFIX = "cmdui";
 
+export const meta = {
+  category: "util",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("commands")
   .setDescription("Browse commands")

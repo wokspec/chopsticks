@@ -3,6 +3,11 @@ import { SlashCommandBuilder } from "discord.js";
 import { makeEmbed, Colors } from "../utils/discordOutput.js";
 import { depositToBank, withdrawFromBank, getWallet, upgradeBankCapacity } from "../economy/wallet.js";
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("bank")
   .setDescription("Manage your bank account")

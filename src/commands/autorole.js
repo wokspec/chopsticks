@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from "discord.
 import { loadGuildData, saveGuildData } from "../utils/storage.js";
 
 export const meta = {
+  category: "admin",
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild]
 };
@@ -15,7 +16,8 @@ export const data = new SlashCommandBuilder()
       .setDescription("Set auto-role")
       .addRoleOption(o => o.setName("role").setDescription("Role").setRequired(true))
   )
-  .addSubcommand(s => s.setName("disable").setDescription("Disable auto-role"));
+  .addSubcommand(s => s.setName("disable").setDescription("Disable auto-role"))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand();

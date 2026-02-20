@@ -4,6 +4,11 @@ import { Colors, replyEmbed } from "../utils/discordOutput.js";
 
 const ITEMS_PER_PAGE = 10;
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("inventory")

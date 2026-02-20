@@ -1496,6 +1496,11 @@ async function acquireTriviaAgents(mgr, { guildId, channelId, userId, requestedO
   };
 }
 
+export const meta = {
+  category: "fun",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("trivia")
   .setDescription("Play trivia solo, versus players, or versus deployed agents")

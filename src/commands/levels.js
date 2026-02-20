@@ -76,7 +76,8 @@ export const data = new SlashCommandBuilder()
           .setDescription("Set the level-up message template (use {user}, {fromLevel}, {toLevel})")
           .addStringOption(o => o.setName("message").setDescription("Message template").setRequired(true))
       )
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles);
 
 export async function execute(interaction) {
   const group = interaction.options.getSubcommandGroup(true);

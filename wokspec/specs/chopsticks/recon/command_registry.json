@@ -1,0 +1,2860 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-02-20T22:13:44.910Z",
+  "total_commands": 75,
+  "summary": {
+    "with_slash_name": 74,
+    "without_slash_name": 1,
+    "with_tests": 20,
+    "without_tests": 55,
+    "missing_discord_perm_gate": 31,
+    "missing_category": 40,
+    "uses_voice": 0,
+    "requires_api_key": 0
+  },
+  "blocking_issues": [
+    {
+      "command": "agents",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "alias",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "automations",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "autorole",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "ban",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "clearwarns",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "config",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "custom",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "giveaway",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "kick",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "levels",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "lock",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "logs",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "macro",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "modlogs",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "nick",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "prefix",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "purge",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "reactionroles",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "role",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "scripts",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "setup",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "slowmode",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "softban",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "starboard",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "timeout",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "unban",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "unlock",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "voice",
+      "code": "NO_SLASH_NAME"
+    },
+    {
+      "command": "warn",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "warnings",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    },
+    {
+      "command": "welcome",
+      "code": "MISSING_DISCORD_PERM_GATE"
+    }
+  ],
+  "warning_issues": [
+    {
+      "command": "8ball",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "agent",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "autorole",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "avatar",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "balance",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "bank",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "botinfo",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "choose",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "coinflip",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "collection",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "commands",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "craft",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "daily",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "echo",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "fight",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "gather",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "giveaway",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "help",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "inventory",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "invite",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "leaderboard",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "pay",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "ping",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "poll",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "prefix",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "profile",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "quests",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "remind",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "roleinfo",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "roll",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "serverinfo",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "shop",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "trivia",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "uptime",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "use",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "userinfo",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "vault",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "voice",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "welcome",
+      "code": "MISSING_CATEGORY"
+    },
+    {
+      "command": "work",
+      "code": "MISSING_CATEGORY"
+    }
+  ],
+  "commands": [
+    {
+      "file_path": "src/commands/8ball.js",
+      "slash_name": "8ball",
+      "prefix_name": "8ball",
+      "meta": {
+        "category": "fun",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/agent.js",
+      "slash_name": "agent",
+      "prefix_name": "agent",
+      "meta": {
+        "category": "social",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/agent-control-secret.test.js",
+        "test/unit/agent-deployment.test.js",
+        "test/unit/agent-limits.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/agents.js",
+      "slash_name": "agents",
+      "prefix_name": "agents",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/agents-autocomplete.test.js",
+        "test/unit/agents-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/alias.js",
+      "slash_name": "alias",
+      "prefix_name": "alias",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/assistant.js",
+      "slash_name": "assistant",
+      "prefix_name": "assistant",
+      "meta": {
+        "category": "assistant",
+        "category_source": "explicit",
+        "userPerms": [],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/automations.js",
+      "slash_name": "automations",
+      "prefix_name": "automations",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/automations-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/autorole.js",
+      "slash_name": "autorole",
+      "prefix_name": "autorole",
+      "meta": {
+        "category": "admin",
+        "category_source": "inferred",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/avatar.js",
+      "slash_name": "avatar",
+      "prefix_name": "avatar",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/balance.js",
+      "slash_name": "balance",
+      "prefix_name": "balance",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/ban.js",
+      "slash_name": "ban",
+      "prefix_name": "ban",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.BanMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 2,
+        "windowSec": 30,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/bank.js",
+      "slash_name": "bank",
+      "prefix_name": "bank",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/botinfo.js",
+      "slash_name": "botinfo",
+      "prefix_name": "botinfo",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/choose.js",
+      "slash_name": "choose",
+      "prefix_name": "choose",
+      "meta": {
+        "category": "fun",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/clearwarns.js",
+      "slash_name": "clearwarns",
+      "prefix_name": "clearwarns",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ModerateMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/coinflip.js",
+      "slash_name": "coinflip",
+      "prefix_name": "coinflip",
+      "meta": {
+        "category": "fun",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/collection.js",
+      "slash_name": "collection",
+      "prefix_name": "collection",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/commands.js",
+      "slash_name": "commands",
+      "prefix_name": "commands",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/commands-ui.test.js"
+      ],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/config.js",
+      "slash_name": "config",
+      "prefix_name": "config",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/rate-limit-config.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/craft.js",
+      "slash_name": "craft",
+      "prefix_name": "craft",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/custom.js",
+      "slash_name": "custom",
+      "prefix_name": "custom",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/daily.js",
+      "slash_name": "daily",
+      "prefix_name": "daily",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/echo.js",
+      "slash_name": "echo",
+      "prefix_name": "echo",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/fight.js",
+      "slash_name": "fight",
+      "prefix_name": "fight",
+      "meta": {
+        "category": "fun",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/fun.js",
+      "slash_name": "fun",
+      "prefix_name": "fun",
+      "meta": {
+        "category": "fun",
+        "category_source": "explicit",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/fun-command.test.js",
+        "test/unit/fun-integrations.test.js",
+        "test/unit/fun-runtime.test.js",
+        "test/unit/fun-security.test.js",
+        "test/unit/fun-variants.test.js"
+      ],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": []
+    },
+    {
+      "file_path": "src/commands/game.js",
+      "slash_name": "game",
+      "prefix_name": "game",
+      "meta": {
+        "category": "tools",
+        "category_source": "explicit",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/game-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": []
+    },
+    {
+      "file_path": "src/commands/gather.js",
+      "slash_name": "gather",
+      "prefix_name": "gather",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/giveaway.js",
+      "slash_name": "giveaway",
+      "prefix_name": "giveaway",
+      "meta": {
+        "category": "admin",
+        "category_source": "inferred",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/help.js",
+      "slash_name": "help",
+      "prefix_name": "help",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/help-command.test.js",
+        "test/unit/help-registry.test.js",
+        "test/unit/help-search.test.js"
+      ],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/inventory.js",
+      "slash_name": "inventory",
+      "prefix_name": "inventory",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/invite.js",
+      "slash_name": "invite",
+      "prefix_name": "invite",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/kick.js",
+      "slash_name": "kick",
+      "prefix_name": "kick",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.KickMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 2,
+        "windowSec": 30,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/leaderboard.js",
+      "slash_name": "leaderboard",
+      "prefix_name": "leaderboard",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/levels.js",
+      "slash_name": "levels",
+      "prefix_name": "levels",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageRoles"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/levels-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/lock.js",
+      "slash_name": "lock",
+      "prefix_name": "lock",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageChannels"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/logs.js",
+      "slash_name": "logs",
+      "prefix_name": "logs",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/macro.js",
+      "slash_name": "macro",
+      "prefix_name": "macro",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/model.js",
+      "slash_name": "model",
+      "prefix_name": "model",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": true,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/modlogs.js",
+      "slash_name": "modlogs",
+      "prefix_name": "modlogs",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/modlogs-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/music.js",
+      "slash_name": "music",
+      "prefix_name": "music",
+      "meta": {
+        "category": "music",
+        "category_source": "explicit",
+        "userPerms": [],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 10,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/nick.js",
+      "slash_name": "nick",
+      "prefix_name": "nick",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageNicknames"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/pay.js",
+      "slash_name": "pay",
+      "prefix_name": "pay",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/ping.js",
+      "slash_name": "ping",
+      "prefix_name": "ping",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/poll.js",
+      "slash_name": "poll",
+      "prefix_name": "poll",
+      "meta": {
+        "category": "tools",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/pools.js",
+      "slash_name": "pools",
+      "prefix_name": "pools",
+      "meta": {
+        "category": "pools",
+        "category_source": "explicit",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/pools-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": []
+    },
+    {
+      "file_path": "src/commands/prefix.js",
+      "slash_name": "prefix",
+      "prefix_name": "prefix",
+      "meta": {
+        "category": "admin",
+        "category_source": "inferred",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/prefix-hardening.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/profile.js",
+      "slash_name": "profile",
+      "prefix_name": "profile",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/profile-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/purge.js",
+      "slash_name": "purge",
+      "prefix_name": "purge",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageMessages"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 2,
+        "windowSec": 20,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/quests.js",
+      "slash_name": "quests",
+      "prefix_name": "quests",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/quests-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/reactionroles.js",
+      "slash_name": "reactionroles",
+      "prefix_name": "reactionroles",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageRoles"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/remind.js",
+      "slash_name": "remind",
+      "prefix_name": "remind",
+      "meta": {
+        "category": "tools",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/role.js",
+      "slash_name": "role",
+      "prefix_name": "role",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageRoles"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/roleinfo.js",
+      "slash_name": "roleinfo",
+      "prefix_name": "roleinfo",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/roll.js",
+      "slash_name": "roll",
+      "prefix_name": "roll",
+      "meta": {
+        "category": "fun",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/scripts.js",
+      "slash_name": "scripts",
+      "prefix_name": "scripts",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/scripts-command-definition.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/serverinfo.js",
+      "slash_name": "serverinfo",
+      "prefix_name": "serverinfo",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/setup.js",
+      "slash_name": "setup",
+      "prefix_name": "setup",
+      "meta": {
+        "category": "admin",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/setup-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/shop.js",
+      "slash_name": "shop",
+      "prefix_name": "shop",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/slowmode.js",
+      "slash_name": "slowmode",
+      "prefix_name": "slowmode",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageChannels"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/softban.js",
+      "slash_name": "softban",
+      "prefix_name": "softban",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.BanMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/starboard.js",
+      "slash_name": "starboard",
+      "prefix_name": "starboard",
+      "meta": {
+        "category": "tools",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/starboard-command.test.js",
+        "test/unit/starboard-utils.test.js"
+      ],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/tickets.js",
+      "slash_name": "tickets",
+      "prefix_name": "tickets",
+      "meta": {
+        "category": "tools",
+        "category_source": "explicit",
+        "userPerms": [],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/tickets-command.test.js",
+        "test/unit/tickets-utils.test.js"
+      ],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": []
+    },
+    {
+      "file_path": "src/commands/timeout.js",
+      "slash_name": "timeout",
+      "prefix_name": "timeout",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ModerateMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/trivia.js",
+      "slash_name": "trivia",
+      "prefix_name": "trivia",
+      "meta": {
+        "category": "fun",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/trivia-command.test.js"
+      ],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/tutorials.js",
+      "slash_name": "tutorials",
+      "prefix_name": "tutorials",
+      "meta": {
+        "category": "core",
+        "category_source": "explicit",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/unban.js",
+      "slash_name": "unban",
+      "prefix_name": "unban",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.BanMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/unlock.js",
+      "slash_name": "unlock",
+      "prefix_name": "unlock",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ManageChannels"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/uptime.js",
+      "slash_name": "uptime",
+      "prefix_name": "uptime",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/use.js",
+      "slash_name": "use",
+      "prefix_name": "use",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/userinfo.js",
+      "slash_name": "userinfo",
+      "prefix_name": "userinfo",
+      "meta": {
+        "category": "util",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 12,
+        "windowSec": 10,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/vault.js",
+      "slash_name": "vault",
+      "prefix_name": "vault",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/voice.js",
+      "slash_name": null,
+      "prefix_name": "voice",
+      "meta": {
+        "category": "voice",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": true,
+      "test_paths": [
+        "test/unit/voice-command.test.js",
+        "test/unit/voice-llm.test.js",
+        "test/unit/voice-model-selection.test.js",
+        "test/unit/voice-owner-perms.test.js",
+        "test/unit/voice-panel.test.js",
+        "test/unit/voice-state.test.js"
+      ],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "NO_SLASH_NAME",
+          "detail": "No .setName() call found; slash command may not deploy correctly."
+        },
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/warn.js",
+      "slash_name": "warn",
+      "prefix_name": "warn",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ModerateMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 30,
+        "source": "command_override"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/warnings.js",
+      "slash_name": "warnings",
+      "prefix_name": "warnings",
+      "meta": {
+        "category": "mod",
+        "category_source": "explicit",
+        "userPerms": [
+          "PermissionFlagsBits.ModerateMembers"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 3,
+        "windowSec": 30,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/welcome.js",
+      "slash_name": "welcome",
+      "prefix_name": "welcome",
+      "meta": {
+        "category": "admin",
+        "category_source": "inferred",
+        "userPerms": [
+          "PermissionFlagsBits.ManageGuild"
+        ],
+        "guildOnly": true
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 5,
+        "windowSec": 60,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "BLOCKING",
+          "code": "MISSING_DISCORD_PERM_GATE",
+          "detail": "Has userPerms but no setDefaultMemberPermissions — Discord-side permission gate absent."
+        },
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    },
+    {
+      "file_path": "src/commands/work.js",
+      "slash_name": "work",
+      "prefix_name": "work",
+      "meta": {
+        "category": "economy",
+        "category_source": "inferred",
+        "userPerms": [],
+        "guildOnly": false
+      },
+      "has_setDefaultMemberPermissions": false,
+      "has_tests": false,
+      "test_paths": [],
+      "rate_limit": {
+        "limit": 8,
+        "windowSec": 15,
+        "source": "category"
+      },
+      "uses_voice": false,
+      "requires_api_key": false,
+      "deploy_status": "unknown",
+      "issues": [
+        {
+          "severity": "WARNING",
+          "code": "MISSING_CATEGORY",
+          "detail": "No explicit category in meta; rate limit inferred or falls back to default (12/10s)."
+        },
+        {
+          "severity": "INFO",
+          "code": "NO_TESTS",
+          "detail": "No unit tests found."
+        }
+      ]
+    }
+  ]
+}

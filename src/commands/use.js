@@ -8,6 +8,11 @@ import { openCrateRolls } from "../game/crates.js";
 import itemsData from "../economy/items.json" with { type: "json" };
 import { addItem } from "../economy/inventory.js";
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("use")

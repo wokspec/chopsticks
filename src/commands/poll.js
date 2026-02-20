@@ -1,5 +1,10 @@
 import { SlashCommandBuilder } from "discord.js";
 
+export const meta = {
+  category: "tools",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("poll")
   .setDescription("Create a poll")

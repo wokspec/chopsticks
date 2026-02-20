@@ -3,6 +3,7 @@ import { loadGuildData, saveGuildData } from "../utils/storage.js";
 import { normalizePrefixValue } from "../prefix/hardening.js";
 
 export const meta = {
+  category: "admin",
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild]
 };
@@ -12,7 +13,8 @@ export const data = new SlashCommandBuilder()
   .setDescription("View or set the prefix")
   .addStringOption(o =>
     o.setName("value").setDescription("New prefix (1-4 chars)").setRequired(false)
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const data = await loadGuildData(interaction.guildId);

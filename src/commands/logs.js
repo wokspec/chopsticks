@@ -37,7 +37,8 @@ export const data = new SlashCommandBuilder()
         o.setName("limit").setDescription("Number of entries").setMinValue(1).setMaxValue(200)
       )
   )
-  ;
+  
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand();

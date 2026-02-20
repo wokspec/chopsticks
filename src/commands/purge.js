@@ -253,7 +253,8 @@ export const data = new SlashCommandBuilder()
   .addBooleanOption(o => o.setName("bots_only").setDescription("Only purge bot messages"))
   .addBooleanOption(o => o.setName("include_pinned").setDescription("Include pinned messages in matches"))
   .addBooleanOption(o => o.setName("dry_run").setDescription("Preview only, do not delete"))
-  .addBooleanOption(o => o.setName("public_result").setDescription("Post result publicly instead of ephemeral"));
+  .addBooleanOption(o => o.setName("public_result").setDescription("Post result publicly instead of ephemeral"))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages);
 
 export async function execute(interaction) {
   const channel = interaction.channel;

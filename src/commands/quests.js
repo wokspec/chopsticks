@@ -11,6 +11,11 @@ import { claimQuestRewards, getDailyQuests } from "../game/quests.js";
 
 const QUEST_UI_PREFIX = "questui";
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("quests")
   .setDescription("View and claim daily quests");

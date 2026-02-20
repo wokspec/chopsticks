@@ -13,7 +13,8 @@ export const data = new SlashCommandBuilder()
   .setName("nick")
   .setDescription("Set or clear a nickname")
   .addUserOption(o => o.setName("user").setDescription("User").setRequired(true))
-  .addStringOption(o => o.setName("nickname").setDescription("New nickname").setRequired(false));
+  .addStringOption(o => o.setName("nickname").setDescription("New nickname").setRequired(false))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames);
 
 export async function execute(interaction) {
   const user = interaction.options.getUser("user", true);

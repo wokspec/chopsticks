@@ -4,6 +4,11 @@ import { getItemData } from "../economy/inventory.js";
 import { describeLegacyItem, isLegacyItemId } from "../economy/legacyItems.js";
 import { Colors, replyEmbed } from "../utils/discordOutput.js";
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("vault")

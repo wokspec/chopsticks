@@ -53,6 +53,11 @@ export const JOBS = [
   }
 ];
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("work")

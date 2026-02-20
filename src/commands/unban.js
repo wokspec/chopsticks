@@ -12,7 +12,8 @@ export const data = new SlashCommandBuilder()
   .setName("unban")
   .setDescription("Unban a user by ID")
   .addStringOption(o => o.setName("user_id").setDescription("User ID").setRequired(true))
-  .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false));
+  .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false))
+  .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers);
 
 export async function execute(interaction) {
   const userId = interaction.options.getString("user_id", true);

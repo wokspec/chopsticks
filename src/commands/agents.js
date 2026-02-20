@@ -1035,7 +1035,8 @@ export const data = new SlashCommandBuilder()
       .setName("get_profile")
       .setDescription("Get the AI profile for an agent.")
       .addStringOption(o => o.setName("agent_id").setDescription("The ID of the agent").setRequired(true))
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const mgr = global.agentManager;

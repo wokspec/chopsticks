@@ -26,6 +26,11 @@ function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+export const meta = {
+  category: "fun",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("fight")

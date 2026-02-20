@@ -19,7 +19,8 @@ export const data = new SlashCommandBuilder()
   )
   .addBooleanOption(o =>
     o.setName("notify_user").setDescription("Attempt to DM user before ban")
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers);
 
 export async function execute(interaction) {
   const user = interaction.options.getUser("user", true);

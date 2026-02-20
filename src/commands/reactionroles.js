@@ -89,7 +89,8 @@ export const data = new SlashCommandBuilder()
       .setDescription("Remove all reaction role bindings for one message")
       .addChannelOption(o => o.setName("channel").setDescription("Channel containing the message").setRequired(true))
       .addStringOption(o => o.setName("message_id").setDescription("Target message ID").setRequired(true))
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles);
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand(true);

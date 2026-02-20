@@ -70,7 +70,8 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand(sub =>
     sub.setName("settings").setDescription("Show command settings")
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   if (!interaction.inGuild()) return;

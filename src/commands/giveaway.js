@@ -3,6 +3,7 @@ import { schedule } from "../utils/scheduler.js";
 import { maybeBuildGuildFunLine } from "../fun/integrations.js";
 
 export const meta = {
+  category: "admin",
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild]
 };
@@ -23,7 +24,8 @@ export const data = new SlashCommandBuilder()
       .setName("end")
       .setDescription("End a giveaway")
       .addStringOption(o => o.setName("message_id").setDescription("Giveaway message ID").setRequired(true))
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 async function pickWinners(msg, count) {
   const reaction = msg.reactions.cache.get("🎉");

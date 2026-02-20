@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-02-20T22:11:24.000Z",
+  "status": "PARTIAL — bot is running; items below are needed to unlock advanced phases",
+  "required_before_code_agent_prs": [
+    {
+      "key": "sandbox_server_id",
+      "description": "Discord guild ID of a dedicated test/sandbox server for integration tests and canary deploys.",
+      "status": "MISSING",
+      "blocking_phases": ["Phase 4C", "Phase 8"],
+      "placeholder": "FILL_IN_SANDBOX_GUILD_ID"
+    },
+    {
+      "key": "secret_manager_provider",
+      "description": "Which secret manager is in use (e.g., Docker secrets, HashiCorp Vault, AWS SSM, env file). Needed to define correct secret paths in implementation prompts.",
+      "status": "ASSUMED_ENV_FILE",
+      "blocking_phases": ["Phase 6 (token encryption keys)"],
+      "placeholder": "FILL_IN_SECRET_MANAGER_PROVIDER",
+      "current_assumption": "Secrets loaded from .env.comprehensive via docker-compose; AGENT_TOKEN_KEY in env"
+    },
+    {
+      "key": "secret_paths",
+      "description": "Canonical paths or variable names for: POSTGRES_URL, REDIS_URL, DISCORD_BOT_TOKEN, GRAFANA_API_KEY, AGENT_TOKEN_KEY.",
+      "status": "ASSUMED_ENV_VARS",
+      "blocking_phases": [],
+      "keys": {
+        "POSTGRES_URL": "ASSUMED: POSTGRES_URL or PG_HOST+PG_PORT+POSTGRES_USER+POSTGRES_PASSWORD+POSTGRES_DB",
+        "REDIS_URL": "ASSUMED: REDIS_URL or REDIS_HOST+REDIS_PORT+REDIS_PASSWORD",
+        "DISCORD_BOT_TOKEN": "ASSUMED: DISCORD_TOKEN in .env",
+        "AGENT_TOKEN_KEY": "ASSUMED: AGENT_TOKEN_KEY (64 hex chars = 32 bytes AES-256-GCM key)",
+        "GRAFANA_API_KEY": "MISSING — not found in .env; needed for Grafana alert provisioning"
+      }
+    },
+    {
+      "key": "prometheus_scrape_endpoint",
+      "description": "The Prometheus scrape target URL for the bot metrics endpoint. Needed for alert rule validation.",
+      "status": "ASSUMED",
+      "blocking_phases": ["Phase 9"],
+      "current_assumption": "http://bot:9100/metrics (per monitoring config)"
+    },
+    {
+      "key": "staging_deploy_target",
+      "description": "Host/IP or Docker context for staging deploys. Required for canary deploy and e2e test instructions.",
+      "status": "MISSING",
+      "blocking_phases": ["Phase 8"],
+      "placeholder": "FILL_IN_STAGING_HOST_OR_DOCKER_CONTEXT"
+    },
+    {
+      "key": "ci_runner",
+      "description": "CI runner type (GitHub-hosted ubuntu-latest, self-hosted, etc.) and whether it has Docker available.",
+      "status": "ASSUMED_GITHUB_HOSTED",
+      "blocking_phases": [],
+      "current_assumption": "GitHub Actions ubuntu-latest (from .github/workflows/ci.yml)"
+    },
+    {
+      "key": "file_storage_provider",
+      "description": "Where uploaded audio files (playlist drop feature) should be stored. Options: S3-compatible bucket, local volume, Backblaze B2.",
+      "status": "MISSING",
+      "blocking_phases": ["Phase 4"],
+      "placeholder": "FILL_IN_STORAGE_PROVIDER"
+    },
+    {
+      "key": "premium_tier_definition",
+      "description": "Whether premium/paid tiers exist and what entitlements they grant (higher rate limits, more concurrent voice channels, etc.).",
+      "status": "MISSING",
+      "blocking_phases": ["Phase 3 (quota tiers)"],
+      "placeholder": "FILL_IN_PREMIUM_TIER_DEFINITION"
+    },
+    {
+      "key": "free_llm_model_endpoint",
+      "description": "The free/default LLM provider endpoint for /ai commands. Candidates: Ollama (local), Hugging Face free inference, llama.cpp server.",
+      "status": "ASSUMED_OLLAMA_OR_NONE",
+      "blocking_phases": ["Phase 6"],
+      "current_assumption": "provider=none by default (no output); Ollama at OLLAMA_URL if self-hosted"
+    },
+    {
+      "key": "virus_scan_provider",
+      "description": "Antivirus/malware scanning service for uploaded audio files. Options: ClamAV (local), VirusTotal API.",
+      "status": "MISSING",
+      "blocking_phases": ["Phase 4B"],
+      "placeholder": "FILL_IN_VIRUS_SCAN_PROVIDER"
+    }
+  ],
+  "non_blocking_questions": [
+    {
+      "key": "prefix_default",
+      "description": "What is the default text prefix? Bot currently supports per-guild prefix via /prefix command.",
+      "current_assumption": "!"
+    },
+    {
+      "key": "slash_only_or_both",
+      "description": "Should prefix commands be supported for all commands, or slash-only going forward?",
+      "current_assumption": "Both — prefix handler exists in src/index.js; slash is primary"
+    },
+    {
+      "key": "image_gen_provider",
+      "description": "For /ai image: which provider? Options: Stable Diffusion (local), user-linked DALL-E key, Replicate.",
+      "current_assumption": "User-linked API key only (WokSpec pays nothing)"
+    },
+    {
+      "key": "audio_transcode_pipeline",
+      "description": "For playlist-drop feature: does a transcode step exist? Candidates: ffmpeg (already a dep), cloud transcode.",
+      "current_assumption": "ffmpeg via @discordjs/voice / prism-media already available"
+    }
+  ]
+}

@@ -13,7 +13,8 @@ export const data = new SlashCommandBuilder()
   .setDescription("Set slowmode for current channel")
   .addIntegerOption(o =>
     o.setName("seconds").setDescription("0-21600").setRequired(true).setMinValue(0).setMaxValue(21600)
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels);
 
 export async function execute(interaction) {
   const seconds = interaction.options.getInteger("seconds", true);

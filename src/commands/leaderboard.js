@@ -6,6 +6,11 @@ function rankLines(rows, fmt) {
   return rows.map((r, i) => `${i + 1}. <@${r.user_id}> ${fmt(r)}`).join("\n");
 }
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("leaderboard")

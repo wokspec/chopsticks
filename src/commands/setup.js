@@ -231,7 +231,8 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand(sub =>
     sub.setName("status").setDescription("Show current setup status summary")
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand(true);

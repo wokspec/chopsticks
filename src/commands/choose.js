@@ -1,5 +1,10 @@
 import { SlashCommandBuilder, MessageFlags } from "discord.js";
 
+export const meta = {
+  category: "fun",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("choose")
   .setDescription("Pick one from a list")

@@ -12,6 +12,11 @@ function formatItemLine(it) {
   return `${emoji} **${it.name || it.id}**${rarity} • \`${it.id}\` • **${price.toLocaleString()}** Credits`;
 }
 
+export const meta = {
+  category: "economy",
+  guildOnly: true,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("shop")

@@ -66,7 +66,8 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand(sub => sub.setName("status").setDescription("Show current starboard settings"))
   .addSubcommand(sub => sub.setName("disable").setDescription("Disable starboard"))
-  .addSubcommand(sub => sub.setName("clear_posts").setDescription("Clear tracked post mapping cache"));
+  .addSubcommand(sub => sub.setName("clear_posts").setDescription("Clear tracked post mapping cache"))
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand(true);

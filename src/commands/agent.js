@@ -45,6 +45,11 @@ async function sendViaAgent({ agent, guildId, channelId, actorUserId, content, e
   });
 }
 
+export const meta = {
+  category: "social",
+  guildOnly: false,
+};
+
 export default {
   data: new SlashCommandBuilder()
     .setName("agent")

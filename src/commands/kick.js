@@ -16,7 +16,8 @@ export const data = new SlashCommandBuilder()
   .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false))
   .addBooleanOption(o =>
     o.setName("notify_user").setDescription("Attempt to DM user before kick")
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers);
 
 export async function execute(interaction) {
   const user = interaction.options.getUser("user", true);

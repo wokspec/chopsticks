@@ -103,6 +103,11 @@ const KNOWN_COMMAND_GROUPS = {
   admin_setup: new Set(["config", "prefix", "alias", "macro", "custom", "logs", "modlogs", "welcome", "autorole", "reactionroles", "levels", "automations", "starboard", "setup"])
 };
 
+export const meta = {
+  category: "util",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("help")
   .setDescription("Show the Chopsticks help center")

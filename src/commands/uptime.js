@@ -1,5 +1,10 @@
 import { SlashCommandBuilder, MessageFlags } from "discord.js";
 
+export const meta = {
+  category: "util",
+  guildOnly: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("uptime")
   .setDescription("Show bot uptime");

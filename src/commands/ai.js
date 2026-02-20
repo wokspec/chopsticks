@@ -18,6 +18,8 @@ import {
   clearUserAiKey,
   resolveAiKey,
   setUserAiKey,
+  setGuildAiPersona,
+  clearGuildAiPersona,
 } from "../utils/aiConfig.js";
 import { validateProviderKey } from "../utils/voiceValidation.js";
 import { getRedisClient } from "../utils/redis.js";
@@ -28,6 +30,39 @@ export const meta = {
   description: "Chat with AI, generate images, and manage your AI provider settings.",
   keywords: ["ai", "chat", "gpt", "claude", "anthropic", "openai", "ollama", "image", "generate", "llm"],
 };
+
+// ── Pure validators (exported for tests) ─────────────────────────────────────
+
+export function validateSummarizeCount(n) {
+  if (n < 5 || n > 100) return { ok: false, error: "count must be between 5 and 100" };
+  return { ok: true };
+}
+
+export function validateTranslateText(str) {
+  if (str.length > 500) return { ok: false, error: "text must be 500 characters or fewer" };
+  return { ok: true };
+}
+
+export function validatePersonaDesc(str) {
+  if (str.length > 500) return { ok: false, error: "description must be 500 characters or fewer" };
+  return { ok: true };
+}
+
+// ── Keyword-based moderation fallback ─────────────────────────────────────────
+
+const SPAM_KEYWORDS = ["buy now", "click here", "free money", "limited offer", "earn money fast", "work from home"];
+const SPAM_PATTERNS = [/(.)\1{7,}/];
+
+export function moderateWithKeywords(text) {
+  const lower = text.toLowerCase();
+  const flags = [];
+  if (SPAM_KEYWORDS.some(k => lower.includes(k))) flags.push("spam");
+  if (SPAM_PATTERNS.some(p => p.test(lower)))     flags.push("spam");
+  const dedupedFlags = [...new Set(flags)];
+  const score   = dedupedFlags.length > 0 ? 6 : 1;
+  const verdict = dedupedFlags.length > 0 ? "warning" : "safe";
+  return { score, flags: dedupedFlags, verdict };
+}
 
 const PROVIDER_CHOICES = [
   { name: "None — disable AI (default)", value: "none" },
@@ -107,6 +142,64 @@ export const data = new SlashCommandBuilder()
   .addSubcommand(sub =>
     sub.setName("help")
       .setDescription("Show AI features, current provider, and quick setup guide")
+  )
+  .addSubcommand(sub =>
+    sub.setName("summarize")
+      .setDescription("Summarize recent channel messages using AI")
+      .addIntegerOption(o =>
+        o.setName("count")
+          .setDescription("Number of messages to summarize (5-100, default 20)")
+          .setRequired(false)
+          .setMinValue(5)
+          .setMaxValue(100)
+      )
+  )
+  .addSubcommand(sub =>
+    sub.setName("translate")
+      .setDescription("Translate text to another language using AI")
+      .addStringOption(o =>
+        o.setName("text")
+          .setDescription("Text to translate (max 500 chars)")
+          .setRequired(true)
+          .setMaxLength(500)
+      )
+      .addStringOption(o =>
+        o.setName("language")
+          .setDescription('Target language (e.g. "Spanish", "French", "Japanese")')
+          .setRequired(true)
+      )
+  )
+  .addSubcommand(sub =>
+    sub.setName("moderate")
+      .setDescription("Moderate a message for policy violations (requires Manage Messages)")
+      .addStringOption(o =>
+        o.setName("message_id")
+          .setDescription("ID of the message to moderate")
+          .setRequired(false)
+      )
+      .addStringOption(o =>
+        o.setName("text")
+          .setDescription("Text to moderate directly")
+          .setRequired(false)
+      )
+  )
+  .addSubcommandGroup(grp =>
+    grp.setName("persona")
+      .setDescription("Manage the guild AI persona (system prompt)")
+      .addSubcommand(sub =>
+        sub.setName("set")
+          .setDescription("Set a guild AI persona prepended to all /ai chat calls")
+          .addStringOption(o =>
+            o.setName("description")
+              .setDescription("Persona description (max 500 chars)")
+              .setRequired(true)
+              .setMaxLength(500)
+          )
+      )
+      .addSubcommand(sub =>
+        sub.setName("clear")
+          .setDescription("Clear the guild AI persona")
+      )
   );
 
 // ── Execute ─────────────────────────────────────────────────────────────────
@@ -125,9 +218,18 @@ export async function execute(interaction) {
     return;
   }
 
+  if (group === "persona") {
+    if (sub === "set")   return handlePersonaSet(interaction);
+    if (sub === "clear") return handlePersonaClear(interaction);
+    return;
+  }
+
   if (sub === "chat")         return handleChat(interaction);
   if (sub === "image")        return handleImage(interaction);
   if (sub === "set-provider") return handleSetProvider(interaction);
+  if (sub === "summarize")    return handleSummarize(interaction);
+  if (sub === "translate")    return handleTranslate(interaction);
+  if (sub === "moderate")     return handleModerate(interaction);
   if (sub === "help")         return handleHelp(interaction);
 }
 
@@ -159,6 +261,10 @@ async function handleChat(interaction) {
 
   await interaction.deferReply({ ephemeral: !isPublic });
 
+  // Fetch guild config for persona
+  let guildConfig = { provider: "none", ollamaUrl: null, persona: null };
+  try { guildConfig = await getGuildAiConfig(guildId); } catch { /* ignore */ }
+
   // Load rolling context from Redis
   const ctxKey = `ai:ctx:${guildId}:${userId}:${channelId}`;
   let context = [];
@@ -174,11 +280,13 @@ async function handleChat(interaction) {
   context.push({ role: "user", content: message });
   if (context.length > MAX_CTX_MESSAGES) context.splice(0, context.length - MAX_CTX_MESSAGES);
 
-  // Build conversation history string for system prompt
+  // Build system prompt from persona + conversation history
   const history = context.slice(0, -1);
-  const system  = history.length > 0
+  const personaPrefix = guildConfig.persona ? `${guildConfig.persona}\n\n` : "";
+  const historyStr = history.length > 0
     ? "Conversation history:\n" + history.map(m => `${m.role}: ${m.content}`).join("\n")
     : "";
+  const system = personaPrefix + historyStr;
 
   let reply;
   try {
@@ -308,6 +416,235 @@ async function handleSetProvider(interaction) {
   await setGuildAiProvider(interaction.guildId, provider);
 
   await interaction.editReply({ content: `✅ AI provider set to \`${provider}\`.` });
+}
+
+// ── /ai summarize ─────────────────────────────────────────────────────────────
+
+async function handleSummarize(interaction) {
+  const count   = interaction.options.getInteger("count") ?? 20;
+  const guildId = interaction.guildId;
+  const userId  = interaction.user.id;
+
+  const v = validateSummarizeCount(count);
+  if (!v.ok) {
+    return interaction.reply({ content: `❌ ${v.error}`, ephemeral: true });
+  }
+
+  let resolved;
+  try {
+    resolved = await resolveAiKey(guildId, userId);
+  } catch {
+    resolved = { provider: null, apiKey: null, ollamaUrl: null };
+  }
+
+  if (!resolved.provider) {
+    return interaction.reply({
+      content: "No AI provider configured. Use /ai set-provider.",
+      ephemeral: true,
+    });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  let messagesStr;
+  try {
+    const fetched = await interaction.channel.messages.fetch({ limit: count });
+    messagesStr = fetched
+      .sort((a, b) => a.createdTimestamp - b.createdTimestamp)
+      .map(m => `${m.author.username}: ${m.content}`)
+      .filter(s => s.trim().length > 0)
+      .join("\n");
+  } catch (err) {
+    await interaction.editReply({ content: `❌ Failed to fetch messages: \`${err?.message?.slice(0, 100)}\`` });
+    return;
+  }
+
+  if (!messagesStr) {
+    await interaction.editReply({ content: "❌ No messages to summarize." });
+    return;
+  }
+
+  let summary;
+  try {
+    summary = await callAiLlm({
+      prompt:    `Summarize this conversation concisely in 3-5 bullet points:\n\n${messagesStr}`,
+      provider:  resolved.provider,
+      apiKey:    resolved.apiKey,
+      ollamaUrl: resolved.ollamaUrl,
+    });
+  } catch (err) {
+    await interaction.editReply({ content: `❌ AI request failed: \`${err?.message?.slice(0, 100)}\`` });
+    return;
+  }
+
+  const display = summary.length > 4096 ? summary.slice(0, 4093) + "…" : summary;
+  const embed = new EmbedBuilder()
+    .setTitle("📋 Conversation Summary")
+    .setDescription(display)
+    .setColor(0x5865f2)
+    .setFooter({ text: `Last ${count} messages` });
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+// ── /ai translate ─────────────────────────────────────────────────────────────
+
+async function handleTranslate(interaction) {
+  const text     = interaction.options.getString("text", true);
+  const language = interaction.options.getString("language", true);
+  const guildId  = interaction.guildId;
+  const userId   = interaction.user.id;
+
+  const v = validateTranslateText(text);
+  if (!v.ok) {
+    return interaction.reply({ content: `❌ ${v.error}`, ephemeral: true });
+  }
+
+  let resolved;
+  try {
+    resolved = await resolveAiKey(guildId, userId);
+  } catch {
+    resolved = { provider: null, apiKey: null, ollamaUrl: null };
+  }
+
+  if (!resolved.provider) {
+    return interaction.reply({ content: "No AI provider configured.", ephemeral: true });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  let translation;
+  try {
+    translation = await callAiLlm({
+      prompt:    `Translate the following text to ${language}. Return ONLY the translation, no explanation:\n\n${text}`,
+      provider:  resolved.provider,
+      apiKey:    resolved.apiKey,
+      ollamaUrl: resolved.ollamaUrl,
+    });
+  } catch (err) {
+    await interaction.editReply({ content: `❌ AI request failed: \`${err?.message?.slice(0, 100)}\`` });
+    return;
+  }
+
+  const cap = s => s.length > 1024 ? s.slice(0, 1021) + "…" : s;
+  const embed = new EmbedBuilder()
+    .setTitle(`🌍 Translation to ${language}`)
+    .addFields(
+      { name: "Original",    value: cap(text),        inline: false },
+      { name: "Translation", value: cap(translation), inline: false },
+    )
+    .setColor(0x00b4d8);
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+// ── /ai moderate ──────────────────────────────────────────────────────────────
+
+async function handleModerate(interaction) {
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
+    return interaction.reply({ content: "❌ You need the **Manage Messages** permission.", ephemeral: true });
+  }
+
+  const messageId  = interaction.options.getString("message_id");
+  const directText = interaction.options.getString("text");
+
+  if (!messageId && !directText) {
+    return interaction.reply({ content: "❌ Provide a `message_id` or `text` to moderate.", ephemeral: true });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  let textToAnalyze = directText ?? "";
+  if (messageId) {
+    try {
+      const msg = await interaction.channel.messages.fetch(messageId);
+      textToAnalyze = msg.content || directText || "";
+    } catch {
+      await interaction.editReply({ content: "❌ Message not found." });
+      return;
+    }
+  }
+
+  if (!textToAnalyze) {
+    await interaction.editReply({ content: "❌ No text to analyze." });
+    return;
+  }
+
+  const guildId = interaction.guildId;
+  const userId  = interaction.user.id;
+  let resolved;
+  try {
+    resolved = await resolveAiKey(guildId, userId);
+  } catch {
+    resolved = { provider: null, apiKey: null, ollamaUrl: null };
+  }
+
+  let result = null;
+  if (resolved.provider) {
+    try {
+      const raw = await callAiLlm({
+        prompt: `Analyze this message for policy violations (spam, hate speech, harassment, NSFW). Respond in JSON: { score: 0-10, flags: [], verdict: 'safe|warning|remove' }:\n\n${textToAnalyze}`,
+        provider:  resolved.provider,
+        apiKey:    resolved.apiKey,
+        ollamaUrl: resolved.ollamaUrl,
+      });
+      const match = raw?.match(/\{[\s\S]*\}/);
+      if (match) result = JSON.parse(match[0]);
+    } catch { /* fall through to keyword check */ }
+  }
+
+  if (!result) result = moderateWithKeywords(textToAnalyze);
+
+  const verdictColors = { safe: 0x00b97d, warning: 0xffa500, remove: 0xe04436 };
+  const verdictEmoji  = { safe: "✅", warning: "⚠️", remove: "🚫" };
+  const verdict = result.verdict ?? "safe";
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${verdictEmoji[verdict] ?? "🔍"} Moderation Result`)
+    .addFields(
+      { name: "Verdict", value: verdict.toUpperCase(), inline: true },
+      { name: "Score",   value: String(result.score ?? 0), inline: true },
+      { name: "Flags",   value: result.flags?.length ? result.flags.join(", ") : "none", inline: true },
+      { name: "Text",    value: textToAnalyze.length > 500 ? textToAnalyze.slice(0, 497) + "…" : textToAnalyze, inline: false },
+    )
+    .setColor(verdictColors[verdict] ?? 0x5865f2);
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+// ── /ai persona set / clear ───────────────────────────────────────────────────
+
+async function handlePersonaSet(interaction) {
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    return interaction.reply({ content: "❌ You need the **Manage Server** permission.", ephemeral: true });
+  }
+
+  const description = interaction.options.getString("description", true);
+  const v = validatePersonaDesc(description);
+  if (!v.ok) {
+    return interaction.reply({ content: `❌ ${v.error}`, ephemeral: true });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+  await setGuildAiPersona(interaction.guildId, description);
+
+  const embed = new EmbedBuilder()
+    .setTitle("✅ AI Persona Set")
+    .setDescription(description)
+    .setColor(0x5865f2)
+    .setFooter({ text: "This persona is prepended to all /ai chat calls in this server." });
+
+  await interaction.editReply({ embeds: [embed] });
+}
+
+async function handlePersonaClear(interaction) {
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    return interaction.reply({ content: "❌ You need the **Manage Server** permission.", ephemeral: true });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+  await clearGuildAiPersona(interaction.guildId);
+  await interaction.editReply({ content: "✅ AI persona cleared." });
 }
 
 // ── /ai token link ────────────────────────────────────────────────────────────

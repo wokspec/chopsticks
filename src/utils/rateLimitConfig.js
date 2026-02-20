@@ -44,8 +44,12 @@ const COMMAND_OVERRIDES = {
   "model link": [3, 300], // Sensitive: API key linking
   agent:        [5, 60],
   agents:       [5, 60],
-  antispam:     [2, 30],  // Admin config: slow to prevent rapid changes
-  streak:       [5, 60],  // Daily check-in: bounded per user per minute
+  antispam:       [2, 30],  // Admin config: slow to prevent rapid changes
+  streak:         [5, 60],  // Daily check-in: bounded per user per minute
+  "ai-summarize": [3, 60],
+  "ai-translate": [5, 60],
+  "ai-moderate":  [5, 30],
+  "ai-persona":   [5, 60],
 };
 
 /**

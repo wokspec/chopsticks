@@ -66,6 +66,7 @@ export async function getGuildAiConfig(guildId) {
   return {
     provider: AI_PROVIDERS.includes(ai.provider) ? ai.provider : "none",
     ollamaUrl: ai.ollama_url || null,
+    persona:   ai.persona   || null,
   };
 }
 
@@ -89,6 +90,14 @@ async function patchAi(guildId, patch) {
 export async function setGuildAiProvider(guildId, provider) {
   if (!AI_PROVIDERS.includes(provider)) throw new Error(`invalid_provider:${provider}`);
   await patchAi(guildId, { provider });
+}
+
+export async function setGuildAiPersona(guildId, persona) {
+  await patchAi(guildId, { persona });
+}
+
+export async function clearGuildAiPersona(guildId) {
+  await patchAi(guildId, { persona: null });
 }
 
 // ── User tokens ─────────────────────────────────────────────────────────────

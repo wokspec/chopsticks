@@ -15,7 +15,9 @@ import {
   clearUserAiKey,
   resolveAiKey,
 } from "../../src/utils/aiConfig.js";
-import { meta, data, execute } from "../../src/commands/ai.js";
+import { meta, data, execute,
+  validateSummarizeCount, validateTranslateText, validatePersonaDesc, moderateWithKeywords,
+} from "../../src/commands/ai.js";
 
 // ── Fake pool ────────────────────────────────────────────────────────────────
 // Simulates the specific SQL patterns used by aiConfig.js in-memory.
@@ -248,5 +250,136 @@ describe("ai command - /ai chat provider=none", () => {
       repliedContent?.includes("No AI provider configured"),
       `Expected setup message, got: ${repliedContent}`
     );
+  });
+});
+
+// ── 9. resolveAiKey returns null when provider is none ────────────────────────
+
+describe("aiConfig - resolveAiKey null when provider none", () => {
+  before(() => _injectPool(makeMapPool()));
+  after(() => _injectPool(null));
+
+  it("returns null provider when guild provider is 'none'", async () => {
+    const pool = makeMapPool();
+    _injectPool(pool);
+    pool.store["guild-pnone"] = { ai: { provider: "none" } };
+    const r = await resolveAiKey("guild-pnone", "user-x");
+    assert.equal(r.provider, null);
+  });
+});
+
+// ── 10. validateSummarizeCount ────────────────────────────────────────────────
+
+describe("ai command - validateSummarizeCount", () => {
+  it("accepts valid count 5", ()  => assert.ok(validateSummarizeCount(5).ok));
+  it("accepts valid count 100", () => assert.ok(validateSummarizeCount(100).ok));
+  it("accepts valid count 20", () => assert.ok(validateSummarizeCount(20).ok));
+  it("rejects count < 5",  () => assert.ok(!validateSummarizeCount(4).ok));
+  it("rejects count > 100", () => assert.ok(!validateSummarizeCount(101).ok));
+});
+
+// ── 11. validateTranslateText ─────────────────────────────────────────────────
+
+describe("ai command - validateTranslateText", () => {
+  it("accepts text within 500 chars", () => assert.ok(validateTranslateText("hello").ok));
+  it("accepts text exactly 500 chars", () => assert.ok(validateTranslateText("a".repeat(500)).ok));
+  it("rejects text over 500 chars", () => assert.ok(!validateTranslateText("a".repeat(501)).ok));
+});
+
+// ── 12. moderateWithKeywords fallback ─────────────────────────────────────────
+
+describe("ai command - moderateWithKeywords", () => {
+  it("returns safe verdict for clean text", () => {
+    const r = moderateWithKeywords("Hello, how are you?");
+    assert.equal(r.verdict, "safe");
+    assert.equal(r.flags.length, 0);
+  });
+
+  it("flags spam text with warning verdict", () => {
+    const r = moderateWithKeywords("buy now — free money click here");
+    assert.equal(r.verdict, "warning");
+    assert.ok(r.flags.includes("spam"), `flags: ${JSON.stringify(r.flags)}`);
+    assert.ok(r.score > 1);
+  });
+
+  it("flags repetition spam", () => {
+    const r = moderateWithKeywords("aaaaaaaaaa spam content");
+    assert.equal(r.verdict, "warning");
+    assert.ok(r.flags.includes("spam"));
+  });
+});
+
+// ── 13. /ai moderate falls back to keyword check when no provider ─────────────
+
+describe("ai command - /ai moderate keyword fallback", () => {
+  let pool;
+  before(() => { pool = makeMapPool(); _injectPool(pool); });
+  after(() => _injectPool(null));
+
+  it("uses keyword fallback and returns embed when no provider configured", async () => {
+    let editReplyCalled = false;
+    let repliedEmbeds   = null;
+
+    const interaction = {
+      inGuild: () => true,
+      guildId:   "guild-mod-fallback",
+      channelId: "channel-mod",
+      user: { id: "user-mod" },
+      memberPermissions: { has: () => true },
+      options: {
+        getSubcommandGroup: () => null,
+        getSubcommand:      () => "moderate",
+        getString: name => name === "text" ? "buy now free money" : null,
+      },
+      reply:      async () => {},
+      deferReply: async () => {},
+      editReply:  async ({ embeds, content }) => {
+        editReplyCalled = true;
+        repliedEmbeds   = embeds;
+      },
+    };
+
+    await execute(interaction);
+
+    assert.ok(editReplyCalled, "editReply should have been called");
+    assert.ok(Array.isArray(repliedEmbeds) && repliedEmbeds.length > 0, "should reply with embeds");
+  });
+});
+
+// ── 14. validatePersonaDesc ───────────────────────────────────────────────────
+
+describe("ai command - validatePersonaDesc", () => {
+  it("accepts description within 500 chars", () => assert.ok(validatePersonaDesc("You are a helpful bot.").ok));
+  it("accepts description exactly 500 chars", () => assert.ok(validatePersonaDesc("a".repeat(500)).ok));
+  it("rejects description over 500 chars", () => assert.ok(!validatePersonaDesc("a".repeat(501)).ok));
+});
+
+// ── 15. /ai command has new subcommands in data ───────────────────────────────
+
+describe("ai command - new subcommands in data builder", () => {
+  it("has summarize subcommand", () => {
+    const json = data.toJSON();
+    assert.ok(json.options.some(o => o.name === "summarize"), "summarize subcommand missing");
+  });
+
+  it("has translate subcommand with text and language options", () => {
+    const json = data.toJSON();
+    const cmd = json.options.find(o => o.name === "translate");
+    assert.ok(cmd, "translate subcommand missing");
+    assert.ok((cmd.options || []).some(o => o.name === "text"),     "translate text option missing");
+    assert.ok((cmd.options || []).some(o => o.name === "language"), "translate language option missing");
+  });
+
+  it("has moderate subcommand", () => {
+    const json = data.toJSON();
+    assert.ok(json.options.some(o => o.name === "moderate"), "moderate subcommand missing");
+  });
+
+  it("has persona subcommand group with set and clear", () => {
+    const json = data.toJSON();
+    const grp  = json.options.find(o => o.name === "persona");
+    assert.ok(grp, "persona subcommand group missing");
+    assert.ok((grp.options || []).some(o => o.name === "set"),   "persona set subcommand missing");
+    assert.ok((grp.options || []).some(o => o.name === "clear"), "persona clear subcommand missing");
   });
 });

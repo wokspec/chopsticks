@@ -71,3 +71,17 @@ export async function cacheSetNx(key, value, ttlSec) {
     return null;
   }
 }
+
+export function getRedis() {
+  return client;
+}
+
+export async function checkRedisHealth() {
+  try {
+    const c = await getClient();
+    await c.ping();
+    return true;
+  } catch {
+    return false;
+  }
+}

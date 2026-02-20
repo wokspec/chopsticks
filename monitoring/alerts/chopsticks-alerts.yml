@@ -141,7 +141,7 @@ groups:
     rules:
       - alert: ChopsticksAIRateLimitSpike
         expr: |
-          sum(increase(chopsticks_rate_limit_hits_total{bucket="ai"}[5m])) > 50
+          sum(increase(chopsticks_rate_limit_hits_total{type="command"}[5m])) > 50
         for: 0m
         labels:
           severity: warning

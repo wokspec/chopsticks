@@ -220,12 +220,58 @@ export const discordRateLimits = new client.Counter({
   registers: [register],
 });
 
+// === Per-command error/invocation metrics ===
+export const commandInvocations = new client.Counter({
+  name: "chopsticks_command_invocations_total",
+  help: "Total command invocations by name and interface (slash/prefix)",
+  labelNames: ["command", "interface"],
+  registers: [register],
+});
+
+export const commandErrors = new client.Counter({
+  name: "chopsticks_command_errors_total",
+  help: "Total command errors by name",
+  labelNames: ["command"],
+  registers: [register],
+});
+
+// === Voice LLM metrics ===
+export const voiceLLMCalls = new client.Counter({
+  name: "chopsticks_voice_llm_calls_total",
+  help: "Voice LLM call outcomes",
+  labelNames: ["status", "provider"], // status: ok | error | skipped
+  registers: [register],
+});
+
+// === Infrastructure health metrics ===
+export const redisHealthOk = new client.Gauge({
+  name: "chopsticks_redis_health_check_ok",
+  help: "1 if Redis health check passed, 0 if failing",
+  registers: [register],
+});
+
+export const dlqMessages = new client.Counter({
+  name: "chopsticks_dlq_messages_total",
+  help: "Total messages sent to the dead-letter queue",
+  labelNames: ["reason"],
+  registers: [register],
+});
+
 // === Helper functions ===
 
 // Track command execution
 export function trackCommand(commandName, duration, status = "success") {
   commandCounter.inc({ command: commandName, status });
   commandDuration.observe({ command: commandName }, duration / 1000);
+}
+
+// Track per-command invocation and errors (used by index.js)
+export function trackCommandInvocation(commandName, iface = "slash") {
+  commandInvocations.inc({ command: commandName, interface: iface });
+}
+
+export function trackCommandError(commandName) {
+  commandErrors.inc({ command: commandName });
 }
 
 // Track economy transaction

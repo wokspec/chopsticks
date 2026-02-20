@@ -64,7 +64,9 @@ import { parsePrefixArgs, resolveAliasedCommand, suggestCommandNames } from "./p
 import { loadGuildData } from "./utils/storage.js";
 import { addCommandLog } from "./utils/commandlog.js";
 import { botLogger } from "./utils/modernLogger.js";
-import { trackCommand, trackRateLimit } from "./utils/metrics.js";
+import { trackCommand, trackCommandInvocation, trackCommandError, trackRateLimit } from "./utils/metrics.js";
+import { redisHealthOk } from "./utils/metrics.js";
+import { checkRedisHealth } from "./utils/cache.js";
 import { buildErrorEmbed, replyInteraction, replyInteractionIfFresh } from "./utils/interactionReply.js";
 import { patchInteractionUiMethods } from "./utils/interactionUiPatch.js";
 import { generateCorrelationId } from "./utils/logger.js";
@@ -723,6 +725,7 @@ client.on(Events.MessageCreate, async message => {
   try {
     await cmd.execute(message, parts, { prefix, commands: prefixCommands });
     const duration = Date.now() - prefixStartedAt;
+    trackCommandInvocation(cmd.name, "prefix");
     void recordUserCommandStat({
       userId: message.author.id,
       command: cmd.name,
@@ -931,10 +934,8 @@ client.on(Events.InteractionCreate, async interaction => {
     // Track successful command execution
     const duration = Date.now() - startTime;
     trackCommand(commandName, duration, "success");
+    trackCommandInvocation(commandName, "slash");
     void recordUserCommandStat({
-      userId: interaction.user.id,
-      command: commandName,
-      ok: true,
       durationMs: duration,
       source: "slash"
     }).catch(() => {});
@@ -943,10 +944,8 @@ client.on(Events.InteractionCreate, async interaction => {
   } catch (error) {
     const duration = Date.now() - startTime;
     trackCommand(commandName, duration, "error");
+    trackCommandError(commandName);
     void recordUserCommandStat({
-      userId: interaction.user.id,
-      command: commandName,
-      ok: false,
       durationMs: duration,
       source: "slash"
     }).catch(() => {});
@@ -979,3 +978,13 @@ if (skipDiscordLogin) {
   if (!process.env.DISCORD_TOKEN) throw new Error("DISCORD_TOKEN missing");
   await client.login(process.env.DISCORD_TOKEN);
 }
+
+// Periodic Redis health check — update metric every 30 seconds
+setInterval(async () => {
+  try {
+    const ok = await checkRedisHealth();
+    redisHealthOk.set(ok ? 1 : 0);
+  } catch {
+    redisHealthOk.set(0);
+  }
+}, 30_000);

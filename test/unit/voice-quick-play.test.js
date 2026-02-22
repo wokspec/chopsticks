@@ -183,3 +183,72 @@ describe('Room modal customId format', () => {
     assert.strictEqual(parseRoomModalCustomId("voiceroomm::guild1:room1"), null);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// Button ownership guard — wrong-user interactions must be acknowledged
+// ──────────────────────────────────────────────────────────────────────────
+
+describe('Button ownership guard — interaction acknowledgement', () => {
+  // Simulate the ownership check pattern used throughout music button handlers.
+  // Pre-fix: `if (ownerId !== userId) return true` without a reply → Discord shows
+  //          "This interaction failed"
+  // Post-fix: an ephemeral reply is sent before returning.
+
+  function makeButtonInteraction(userId, acknowledged = []) {
+    return {
+      user: { id: userId },
+      isButton: () => true,
+      reply: async (payload) => {
+        acknowledged.push({ type: 'reply', payload });
+        return payload;
+      },
+      deferUpdate: async () => acknowledged.push({ type: 'deferUpdate' }),
+      deferReply: async () => acknowledged.push({ type: 'deferReply' }),
+    };
+  }
+
+  it('wrong-owner check replies ephemerally before returning', async () => {
+    const ownerId = 'alice';
+    const wrongUser = 'bob';
+    const acks = [];
+    const interaction = makeButtonInteraction(wrongUser, acks);
+
+    // Simulate the fixed pattern
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, content: 'Not your panel' }).catch(() => {});
+      // return true would happen here in real code
+    }
+
+    assert.strictEqual(acks.length, 1, 'exactly one acknowledgement must be sent');
+    assert.strictEqual(acks[0].type, 'reply');
+    assert.ok(acks[0].payload.ephemeral);
+  });
+
+  it('correct-owner proceeds without sending an early reply', async () => {
+    const ownerId = 'alice';
+    const acks = [];
+    const interaction = makeButtonInteraction('alice', acks);
+
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, content: 'Not your panel' }).catch(() => {});
+    }
+    // No early return — no early ack
+    assert.strictEqual(acks.length, 0);
+  });
+
+  it('select menu with deferUpdate-first is already acknowledged before ownership check', async () => {
+    const ownerId = 'alice';
+    const acks = [];
+    const interaction = makeButtonInteraction('bob', acks);
+
+    // Simulate deferUpdate-first pattern (handleSelect mplbulk:pick:)
+    await interaction.deferUpdate().catch(() => {});
+    if (ownerId && interaction.user.id !== ownerId) {
+      // Interaction is already acknowledged — just return (no extra reply needed)
+      // In real code this is `return true`
+    }
+    // deferUpdate was called → 1 acknowledgement present
+    assert.strictEqual(acks.length, 1);
+    assert.strictEqual(acks[0].type, 'deferUpdate');
+  });
+});

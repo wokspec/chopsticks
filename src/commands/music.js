@@ -3088,7 +3088,10 @@ export async function handleButton(interaction) {
     const action = parts[1]; // confirm|cancel
     const uiKey = parts[2];
     const ownerId = parts[3];
-    if (ownerId && interaction.user.id !== ownerId) return true;
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "This panel belongs to another user.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
     await interaction.deferUpdate().catch(() => {});
     if (action === "cancel") {
       await interaction.editReply({ embeds: [makeEmbed("Bulk Remove", "Cancelled.", [], null, null, QUEUE_COLOR)], components: [] }).catch(() => {});
@@ -3138,7 +3141,10 @@ export async function handleButton(interaction) {
     const uiKey = parts[1];
     const ownerId = parts[2];
     const action = parts[3] || "";
-    if (ownerId && interaction.user.id !== ownerId) return true;
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "This panel belongs to another user.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
     await interaction.deferUpdate().catch(() => {});
     if (action === "cancel") {
       await interaction.editReply({ embeds: [makeEmbed("Dedupe", "Cancelled.", [], null, null, QUEUE_COLOR)], components: [] }).catch(() => {});
@@ -3192,7 +3198,10 @@ export async function handleButton(interaction) {
     const uiKey = parts[1];
     const ownerId = parts[2];
     const action = parts[3] || "";
-    if (ownerId && interaction.user.id !== ownerId) return true;
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "This panel belongs to another user.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
     const ui = await getPlaylistUiCache(uiKey);
     if (!ui || String(ui.userId) !== interaction.user.id) {
       await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "This playlist session expired. Re-open playlists.", [], null, null, 0xFF0000)] }).catch(() => {});
@@ -3863,7 +3872,10 @@ export async function handleButton(interaction) {
     const parts = id.split(":");
     const ownerId = parts[2];
     const action = parts[3] || "";
-    if (ownerId && interaction.user.id !== ownerId) return true;
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "This panel belongs to another user.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
 
     const perms = interaction.memberPermissions;
     if (!perms?.has?.(PermissionFlagsBits.ManageGuild)) {
@@ -4088,11 +4100,17 @@ export async function handleButton(interaction) {
     const ownerId = parts[2];
     const action = parts[3] || "";
     const playlistId = parts[4] || "";
-    if (ownerId && interaction.user.id !== ownerId) return true;
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "This panel belongs to another user.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
     const guildId = interaction.guildId;
     if (!guildId) return true;
     const perms = interaction.memberPermissions;
-    if (!perms?.has?.(PermissionFlagsBits.ManageGuild)) return true;
+    if (!perms?.has?.(PermissionFlagsBits.ManageGuild)) {
+      await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "Manage Server permission required.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
 
     if (action === "cancel") {
       await interaction.deferUpdate().catch(() => {});
@@ -4139,7 +4157,10 @@ export async function handleButton(interaction) {
     const ownerId = parts[2];
     const op = parts[3] || "";
     const playlistId = parts[4] || "";
-    if (ownerId && interaction.user.id !== ownerId) return true;
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "This panel belongs to another user.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
     const guildId = interaction.guildId;
     if (!guildId) return true;
     const data = await loadGuildData(guildId);
@@ -4684,7 +4705,10 @@ export async function handleSelect(interaction) {
     const parts = id.split(":");
     const kind = parts[1]; // panel_pl | bind_channel
     const ownerId = parts[2];
-    if (ownerId && interaction.user.id !== ownerId) return true;
+    if (ownerId && interaction.user.id !== ownerId) {
+      await interaction.followUp({ ephemeral: true, embeds: [makeEmbed("Playlist", "This panel belongs to another user.", [], null, null, 0xFF0000)] }).catch(() => {});
+      return true;
+    }
     const guildId = interaction.guildId;
     if (!guildId) return true;
 

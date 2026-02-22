@@ -23,7 +23,7 @@ import {
   formatMusicError
 } from "../music/service.js";
 import { getMusicConfig, setDefaultMusicMode, updateMusicSettings } from "../music/config.js";
-import { loadGuildData, saveGuildData } from "../utils/storage.js";
+import { loadGuildData, saveGuildData, getGuildSelectedPool, incrementPoolStat } from "../utils/storage.js";
 import { auditLog } from "../utils/audit.js";
 import { handleInteractionError, handleSafeError, ErrorCategory } from "../utils/errorHandler.js";
 import { getCache, setCache } from "../utils/redis.js";
@@ -486,6 +486,8 @@ function normalizePlaylistsConfig(data) {
   cfg.playlists ??= {};
   cfg.channelBindings ??= {};
   cfg.hub ??= null; // { channelId, messageId }
+  // Admin toggle: must be explicitly enabled before users can create personal drop playlists.
+  cfg.allowUserCreation = Boolean(cfg.allowUserCreation ?? false);
 
   // Normalize playlist objects (additive/back-compat).
   for (const [pid, plRaw] of Object.entries(cfg.playlists)) {
@@ -561,13 +563,14 @@ function buildPlaylistPanelEmbed(cfg) {
     { name: "Playlist Channels", value: `${boundChannels}/${MUSIC_PLAYLIST_MAX_CHANNELS}`, inline: true },
     { name: "Max Items / Playlist", value: String(cfg.maxItemsPerPlaylist), inline: true },
     { name: "Personal Playlists", value: `Up to ${cfg.maxPersonalPerUser} per user`, inline: true },
+    { name: "User Playlist Creation", value: cfg.allowUserCreation ? "✅ Enabled" : "❌ Disabled", inline: true },
     {
-      name: "How It Works",
+      name: "Admin Setup Steps",
       value:
-        "1) Create a playlist.\n" +
-        "2) Bind a **drop channel** (text channel).\n" +
-        "3) Drop audio files or links in that channel.\n" +
-        "4) Users press **Playlists** in the Music Queue UI to browse and queue tracks.",
+        "1) Deploy agents via `/agents deploy` (required for playback).\n" +
+        "2) Toggle **Enable User Playlists** below to let users create drop threads.\n" +
+        "3) Set a **Hub Message** channel so users see the Open My Playlist button.\n" +
+        "4) Optionally create server-wide playlists and bind drop channels.",
       inline: false
     },
     { name: "Recent Playlists", value: lines.join("\n"), inline: false }
@@ -627,22 +630,23 @@ function buildPlaylistPanelMessageComponents(playlistId) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`mplpanel:open:${playlistId}`).setLabel("Browse").setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId(`mplpanel:queue_random:${playlistId}`).setLabel("Queue Random").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`mplpanel:refresh:${playlistId}`).setLabel("Refresh").setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`mplpanel:refresh:${playlistId}`).setLabel("Refresh").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`mplpanel:close_drop:${playlistId}`).setLabel("Done / Close").setStyle(ButtonStyle.Danger)
   );
   return [row];
 }
 
 function buildPlaylistHubEmbed(cfg) {
   const fields = [
-    { name: "What This Is", value: "A self-serve playlist station.\nCreate your own drop channel, then drop audio files, links, or `q: keywords` to build a playlist.", inline: false },
-    { name: "How To Use", value: "1) Press **Create Personal Drop**\n2) Drop files/links inside the thread\n3) Press **Browse Playlists** to queue tracks into VC", inline: false }
+    { name: "What This Is", value: "A self-serve playlist station.\nOpen your personal drop thread, drag in audio files or paste links, then queue tracks into voice.", inline: false },
+    { name: "How To Use", value: "1) Press **Open My Playlist** — opens your existing drop thread or creates one\n2) Drop audio files or paste links inside the thread\n3) Press **Done / Close** when finished editing to hide the thread\n4) Press **Browse Playlists** to queue tracks into VC", inline: false }
   ];
-  return makeEmbed("Music Playlist Hub", "Build playlists without commands spam.", fields, null, null, QUEUE_COLOR);
+  return makeEmbed("Music Playlist Hub", "Build playlists without command spam.", fields, null, null, QUEUE_COLOR);
 }
 
 function buildPlaylistHubComponents() {
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("mplhub:create").setLabel("Create Personal Drop").setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId("mplhub:create").setLabel("Open My Playlist").setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId("mplhub:browse").setLabel("Browse Playlists").setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId("mplhub:help").setLabel("How It Works").setStyle(ButtonStyle.Secondary)
   );
@@ -700,11 +704,17 @@ function buildPlaylistPanelComponents(cfg, userId) {
     new ButtonBuilder().setCustomId(`musicpl:panel:${userId}:clear`).setLabel("Clear Items").setStyle(ButtonStyle.Secondary).setDisabled(playlists.length === 0),
     new ButtonBuilder().setCustomId(`musicpl:panel:${userId}:delete`).setLabel("Delete").setStyle(ButtonStyle.Danger).setDisabled(playlists.length === 0),
     new ButtonBuilder().setCustomId(`musicpl:panel:${userId}:refresh`).setLabel("Refresh").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`musicpl:panel:${userId}:hub`).setLabel("Hub Message").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`musicpl:panel:${userId}:hub`).setLabel("Hub Message").setStyle(ButtonStyle.Secondary)
+  );
+
+  const toggleLabel = cfg.allowUserCreation ? "Disable User Playlists" : "Enable User Playlists";
+  const toggleStyle = cfg.allowUserCreation ? ButtonStyle.Danger : ButtonStyle.Success;
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`musicpl:panel:${userId}:toggle_user_creation`).setLabel(toggleLabel).setStyle(toggleStyle),
     new ButtonBuilder().setCustomId(`musicpl:panel:${userId}:close`).setLabel("Close").setStyle(ButtonStyle.Secondary)
   );
 
-  const rows = [row1, row2];
+  const rows = [row1, row2, row3];
   if (playlists.length) {
     const opts = playlists.map(pl => ({
       label: truncate(pl.name || pl.id, 100),
@@ -1029,7 +1039,9 @@ async function tryCreateDropThread(interaction, name) {
     });
     await thread.members.add(interaction.user.id).catch(() => {});
     return thread;
-  } catch {}
+  } catch (err) {
+    console.warn("[music:playlists] Private thread creation failed, trying public fallback:", err?.message ?? err);
+  }
 
   try {
     const thread = await parent.threads.create({
@@ -1039,7 +1051,9 @@ async function tryCreateDropThread(interaction, name) {
     });
     await thread.members.add(interaction.user.id).catch(() => {});
     return thread;
-  } catch {}
+  } catch (err) {
+    console.warn("[music:playlists] Public thread fallback also failed:", err?.message ?? err);
+  }
 
   return null;
 }
@@ -1619,6 +1633,12 @@ async function playAudioDropToVc(interaction, dropKey, uploaderId, voiceChannelI
     await sendAudioDropEphemeral(interaction, {
       embeds: [buildTrackEmbed(action, playedTrack)]
     }, { preferFollowUp });
+    // Fire-and-forget pool songs_played stat
+    if (guildId) {
+      getGuildSelectedPool(guildId).then(poolId => {
+        if (poolId) incrementPoolStat(poolId, 'songs_played').catch(() => {});
+      }).catch(() => {});
+    }
   } catch (err) {
     const msg = formatMusicError(err);
     await sendAudioDropEphemeral(interaction, {
@@ -2474,7 +2494,7 @@ export async function handleButton(interaction) {
     if (action === "help") {
       await interaction.reply({
         ephemeral: true,
-        embeds: [makeEmbed("Playlist Hub", "Use the hub to create a personal drop thread without spamming commands.\n\nInside your drop thread you can:\n- upload audio files\n- paste links\n- type `q: keywords` to add a search term\n\nThen open **Browse Playlists** to queue tracks into your voice channel.", [], null, null, QUEUE_COLOR)]
+        embeds: [makeEmbed("Playlist Hub", "Press **Open My Playlist** to open your personal drop thread (or create one if you don't have one yet).\n\nInside your drop thread you can:\n- upload audio files\n- paste links\n- type `q: keywords` to add a search term\n\nPress **Done / Close** in the thread when you're done editing to hide it.\nThen press **Browse Playlists** to queue tracks into your voice channel.", [], null, null, QUEUE_COLOR)]
       }).catch(() => {});
       return true;
     }
@@ -2486,13 +2506,99 @@ export async function handleButton(interaction) {
     }
 
     if (action === "create") {
-      const rl = await checkRateLimit(`mplhub:create:${guildId}:${interaction.user.id}`, 2, 30).catch(() => ({ ok: true }));
+      const rl = await checkRateLimit(`mplhub:create:${guildId}:${interaction.user.id}`, 3, 30).catch(() => ({ ok: true }));
       if (!rl.ok) {
-        await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist Hub", "You're creating playlists too fast. Try again in a moment.", [], null, null, 0xFF0000)] }).catch(() => {});
+        await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist Hub", "You're doing this too fast. Try again in a moment.", [], null, null, 0xFF0000)] }).catch(() => {});
         return true;
       }
 
       await interaction.deferReply({ ephemeral: true }).catch(() => {});
+
+      const data = await loadGuildData(guildId);
+      const cfg = normalizePlaylistsConfig(data);
+
+      // Gate behind admin-controlled feature flag.
+      if (!cfg.allowUserCreation) {
+        await interaction.editReply({
+          embeds: [makeEmbed("Playlist Hub", "User playlists are not enabled on this server.\nAsk an admin to enable them via `/music playlist panel`.", [], null, null, 0xFF0000)]
+        }).catch(() => {});
+        return true;
+      }
+
+      const userId = interaction.user.id;
+      const existingPl = Object.values(cfg.playlists || {}).find(p => String(p?.createdBy || "") === userId) ?? null;
+
+      // --- Re-open existing playlist drop thread ---
+      if (existingPl) {
+        let threadId = existingPl.channelId;
+        let thread = threadId ? interaction.guild?.channels?.cache?.get(threadId) : null;
+
+        // Thread exists: re-add user and unarchive.
+        if (thread?.isThread?.()) {
+          await thread.members.add(userId).catch(() => {});
+          if (thread.archived) await thread.setArchived(false).catch(() => {});
+          const components = [new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("mplhub:browse").setLabel("Browse Playlists").setStyle(ButtonStyle.Primary)
+          )];
+          await interaction.editReply({
+            embeds: [makeEmbed(
+              "Playlist Drop Reopened",
+              `Your drop thread is open: <#${thread.id}>\nDrop audio files or links there to add tracks.`,
+              [{ name: "Tip", value: "Press **Done / Close** in the thread when you're done editing.", inline: false }],
+              null, null, QUEUE_COLOR
+            )],
+            components
+          }).catch(() => {});
+          return true;
+        }
+
+        // Playlist exists but no thread (or thread deleted): create + bind a new thread.
+        const newThread = await tryCreateDropThread(interaction, `${interaction.user.username}-playlist`).catch(() => null);
+        if (newThread?.id) {
+          existingPl.channelId = newThread.id;
+          existingPl.updatedAt = Date.now();
+          cfg.channelBindings[newThread.id] = existingPl.id;
+          // Remove any stale binding for the old missing thread.
+          if (threadId && threadId !== newThread.id) delete cfg.channelBindings[threadId];
+          data.music.drops ??= { channelIds: [] };
+          if (!Array.isArray(data.music.drops.channelIds)) data.music.drops.channelIds = [];
+          if (!data.music.drops.channelIds.includes(newThread.id)) data.music.drops.channelIds.push(newThread.id);
+          await saveGuildData(guildId, data).catch(() => {});
+          threadId = newThread.id;
+          thread = newThread;
+          // Pin a panel message in the new thread.
+          if (thread.isTextBased?.()) {
+            const msg = await thread.send({
+              embeds: [buildPlaylistPanelMessageEmbed(existingPl)],
+              components: buildPlaylistPanelMessageComponents(existingPl.id)
+            }).catch(() => null);
+            if (msg) {
+              await msg.pin().catch(() => {});
+              existingPl.panel = { channelId: thread.id, messageId: msg.id };
+              existingPl.updatedAt = Date.now();
+              await saveGuildData(guildId, data).catch(() => {});
+            }
+          }
+        }
+
+        const components = [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId("mplhub:browse").setLabel("Browse Playlists").setStyle(ButtonStyle.Primary)
+        )];
+        await interaction.editReply({
+          embeds: [makeEmbed(
+            "Playlist Drop Ready",
+            threadId
+              ? `Your drop thread is open: <#${threadId}>\nDrop audio files or links there to add tracks.`
+              : `Your playlist **${existingPl.name}** is ready but has no drop thread.\nAsk an admin to bind a drop channel via \`/music playlist panel\`.`,
+            [{ name: "Tip", value: "Type `q: keywords` in the drop thread to add a search query.", inline: false }],
+            null, null, QUEUE_COLOR
+          )],
+          components
+        }).catch(() => {});
+        return true;
+      }
+
+      // --- Create new playlist ---
       const res = await createPersonalPlaylist(interaction, { parentChannelId: interaction.channelId });
       if (!res.ok) {
         const msg =
@@ -2503,9 +2609,10 @@ export async function handleButton(interaction) {
         return true;
       }
 
-      const data = await loadGuildData(guildId);
-      const cfg = normalizePlaylistsConfig(data);
-      const pl = cfg.playlists?.[res.playlistId] ?? res.playlist;
+      // Re-read cfg after createPersonalPlaylist saved it.
+      const freshData = await loadGuildData(guildId);
+      const freshCfg = normalizePlaylistsConfig(freshData);
+      const pl = freshCfg.playlists?.[res.playlistId] ?? res.playlist;
 
       // If we created a thread, drop a panel message inside it.
       if (res.threadId && interaction.guild) {
@@ -2519,29 +2626,25 @@ export async function handleButton(interaction) {
             await msg.pin().catch(() => {});
             pl.panel = { channelId: thread.id, messageId: msg.id };
             pl.updatedAt = Date.now();
-            await saveGuildData(guildId, data).catch(() => {});
+            await saveGuildData(guildId, freshData).catch(() => {});
           }
         }
       }
 
-      const components = [];
-      const row = new ActionRowBuilder().addComponents(
+      const components = [new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("mplhub:browse").setLabel("Browse Playlists").setStyle(ButtonStyle.Primary)
-      );
-      components.push(row);
+      )];
 
       await interaction.editReply({
         embeds: [makeEmbed(
-          "Personal Playlist Created",
+          "Playlist Drop Created",
           res.threadId
-            ? `Drop files/links here: <#${res.threadId}>`
-            : "Playlist created. Ask an admin to enable threads or bind a drop channel.",
+            ? `Your drop thread is ready: <#${res.threadId}>\nDrop audio files or links there to build your playlist.`
+            : "Playlist created. Ask an admin to enable threads or bind a drop channel via `/music playlist panel`.",
           [
-            { name: "Tip", value: "Type `q: keywords` in the drop thread to add a search query.", inline: false }
+            { name: "Tip", value: "Type `q: keywords` in the drop thread to add a search query.\nPress **Done / Close** in the thread when you're done editing.", inline: false }
           ],
-          null,
-          null,
-          QUEUE_COLOR
+          null, null, QUEUE_COLOR
         )],
         components
       }).catch(() => {});
@@ -2962,7 +3065,10 @@ export async function handleButton(interaction) {
       try { config = await getMusicConfig(guildId); } catch {}
       const alloc = await ensureSessionAgent(guildId, vcId, { textChannelId: interaction.channelId, ownerUserId: interaction.user.id });
       if (!alloc.ok) {
-        await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Music Error", formatMusicError(alloc.reason), [], null, null, 0xFF0000)] }).catch(() => {});
+        const deployRow = (alloc.reason === "no-agents-in-guild" || alloc.reason === "no-free-agents")
+          ? [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`mplpanel:deploy_agents:${playlistId}`).setLabel("Deploy Agents").setStyle(ButtonStyle.Secondary))]
+          : [];
+        await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Music Error", formatMusicError(alloc.reason), [], null, null, 0xFF0000)], components: deployRow }).catch(() => {});
         return true;
       }
       try {
@@ -2976,6 +3082,39 @@ export async function handleButton(interaction) {
         }
         await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Music Error", formatMusicError(err), [], null, null, 0xFF0000)] }).catch(() => {});
       }
+      return true;
+    }
+
+    if (action === "close_drop") {
+      const rl = await checkRateLimit(`mplpanel:close_drop:${guildId}:${interaction.user.id}`, 5, 60).catch(() => ({ ok: true }));
+      if (!rl.ok) {
+        await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "Slow down — try again in a moment.", [], null, null, 0xFF0000)] }).catch(() => {});
+        return true;
+      }
+      // Only the playlist owner, collaborators, or an admin can close the drop thread.
+      if (!canManagePlaylist(interaction, pl)) {
+        await interaction.reply({ ephemeral: true, embeds: [makeEmbed("Playlist", "You don't have permission to close this drop thread.", [], null, null, 0xFF0000)] }).catch(() => {});
+        return true;
+      }
+      const thread = interaction.channel;
+      if (thread?.isThread?.()) {
+        await thread.members.remove(interaction.user.id).catch(() => {});
+        // Archive after a short delay so the member removal completes first.
+        setTimeout(() => { thread.setArchived(true).catch(() => {}); }, 1500);
+      }
+      await interaction.reply({
+        ephemeral: true,
+        embeds: [makeEmbed(
+          "Playlist Drop Closed",
+          "Your drop thread is now hidden from your channel list.\nPress **Open My Playlist** in the hub anytime to reopen it.",
+          [], null, null, QUEUE_COLOR
+        )]
+      }).catch(() => {});
+      return true;
+    }
+
+    if (action === "deploy_agents") {
+      await openAdvisorUiHandoff(interaction, { desiredTotal: 10 }).catch(() => {});
       return true;
     }
   }
@@ -3250,7 +3389,19 @@ export async function handleButton(interaction) {
     }
 
     if (action === "deploy") {
-      await openAdvisorUiHandoff(interaction, { desiredTotal: 10 }).catch(() => {});
+      const isAdmin = interaction.memberPermissions?.has?.(PermissionFlagsBits.ManageGuild);
+      if (isAdmin) {
+        await openAdvisorUiHandoff(interaction, { desiredTotal: 10 }).catch(() => {});
+      } else {
+        await interaction.reply({
+          ephemeral: true,
+          embeds: [makeEmbed(
+            "No Music Agents Available",
+            "⏳ No music agents are deployed in this server.\n\nAsk a server admin to run `/agents deploy` or use the agent advisor panel to get agents set up.",
+            [], null, null, 0xFF0000
+          )]
+        }).catch(() => {});
+      }
       return true;
     }
 
@@ -3288,6 +3439,20 @@ export async function handleButton(interaction) {
       await interaction.deferUpdate().catch(() => {});
       const data = await loadGuildData(guildId);
       const cfg = normalizePlaylistsConfig(data);
+      await interaction.editReply({
+        embeds: [buildPlaylistPanelEmbed(cfg)],
+        components: buildPlaylistPanelComponents(cfg, interaction.user.id)
+      }).catch(() => {});
+      return true;
+    }
+
+    if (action === "toggle_user_creation") {
+      await interaction.deferUpdate().catch(() => {});
+      const data = await loadGuildData(guildId);
+      const cfg = normalizePlaylistsConfig(data);
+      cfg.allowUserCreation = !cfg.allowUserCreation;
+      await saveGuildData(guildId, data).catch(() => {});
+      await auditLog({ guildId, userId: interaction.user.id, action: "music.playlists.toggle_user_creation", details: { allowUserCreation: cfg.allowUserCreation } });
       await interaction.editReply({
         embeds: [buildPlaylistPanelEmbed(cfg)],
         components: buildPlaylistPanelComponents(cfg, interaction.user.id)

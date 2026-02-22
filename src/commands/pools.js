@@ -174,6 +174,40 @@ export const data = new SlashCommandBuilder()
             .setAutocomplete(true)
             .setRequired(true)
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('profile')
+        .setDescription('Set your pool appearance (name, description, color, emoji, specialty tag)')
+        .addStringOption(o => o.setName('pool').setDescription('Pool ID').setRequired(true).setAutocomplete(true))
+        .addStringOption(o => o.setName('description').setDescription('Short description (max 200 chars)'))
+        .addStringOption(o => o.setName('color').setDescription('Hex color e.g. #5865F2'))
+        .addStringOption(o => o.setName('emoji').setDescription('Pool emoji e.g. 🎵'))
+        .addStringOption(o => o.setName('specialty').setDescription('Focus tag e.g. music, assistant, moderation'))
+        .addStringOption(o => o.setName('banner_url').setDescription('Image URL for banner'))
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('leaderboard')
+        .setDescription('Top public pools ranked by activity')
+        .addStringOption(o => o.setName('sort').setDescription('Sort by').addChoices(
+          { name: '🎵 Songs Played', value: 'songs_played' },
+          { name: '🚀 Deployments', value: 'total_deployments' },
+          { name: '🏆 Score', value: 'composite_score' },
+        ))
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('stats')
+        .setDescription('View stats for a pool')
+        .addStringOption(o => o.setName('pool').setDescription('Pool ID (defaults to selected pool)').setAutocomplete(true))
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('discover')
+        .setDescription('Browse and filter public pools')
+        .addStringOption(o => o.setName('specialty').setDescription('Filter by specialty tag e.g. music'))
+        .addBooleanOption(o => o.setName('featured').setDescription('Show featured pools only'))
     );
 
 export async function execute(interaction) {
@@ -225,6 +259,18 @@ export async function execute(interaction) {
           break;
         case 'admin_view':
           await handleAdminView(interaction);
+          break;
+        case 'profile':
+          await handleProfile(interaction);
+          break;
+        case 'leaderboard':
+          await handleLeaderboard(interaction);
+          break;
+        case 'stats':
+          await handleStats(interaction);
+          break;
+        case 'discover':
+          await handleDiscover(interaction);
           break;
         default:
           await interaction.reply({
@@ -775,6 +821,12 @@ async function renderPoolUi(interaction, { update = false, requested = {}, note 
 // ========== LIST POOLS ==========
 
 async function handleList(interaction) {
+  // Show onboarding wizard if guild has no pool configured yet
+  if (interaction.guildId && !interaction.replied && !interaction.deferred) {
+    const shown = await maybeShowOnboarding(interaction);
+    if (shown) return;
+  }
+
   await interaction.deferReply({ ephemeral: true });
 
   const userId = interaction.user.id;
@@ -1934,6 +1986,118 @@ export async function handleButton(interaction) {
   return false;
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Button handling for wizard, leaderboard sort, and contribution shortcuts
+// ──────────────────────────────────────────────────────────────────────────
+export async function handlePoolGlobalButton(interaction) {
+  if (!interaction.isButton?.()) return false;
+  const id = interaction.customId;
+
+  // Onboarding wizard buttons
+  if (id === 'pool_wizard:browse') {
+    // Re-use handlePublic logic inline
+    await interaction.deferUpdate();
+    const allPools = await storageLayer.listPools().catch(() => []);
+    const publicPools = allPools.filter(p => p.visibility === 'public');
+    if (publicPools.length === 0) {
+      await interaction.editReply({ embeds: [buildPoolEmbed('No Public Pools', 'There are no public pools yet. Create one with `/pools create`.', Colors.INFO)], components: [] });
+      return true;
+    }
+    const agentLists = await Promise.all(publicPools.map(p => storageLayer.fetchPoolAgents(p.pool_id).catch(() => [])));
+    const statsLists = await Promise.all(publicPools.map(p => storageLayer.fetchPoolStats(p.pool_id).catch(() => null)));
+    const embeds = publicPools.slice(0, 3).map((pool, i) => buildPoolCard(pool, agentLists[i] || [], statsLists[i]));
+    const row = new ActionRowBuilder().addComponents(
+      ...publicPools.slice(0, 3).map(p =>
+        new ButtonBuilder().setCustomId(`pool_contribute:${p.pool_id}`).setLabel(`Use ${p.name.slice(0,18)}`).setStyle(ButtonStyle.Primary)
+      )
+    );
+    await interaction.editReply({ embeds, components: [row] });
+    return true;
+  }
+
+  if (id === 'pool_wizard:create') {
+    await interaction.reply({
+      embeds: [buildPoolEmbed('Create a Pool', 'Use `/pools create` to set up your pool.\n\n**Tips:**\n• Use `/pools profile` to customize its look\n• Set visibility to `public` to accept contributions\n• Recommended deploy size is 10 agents', Colors.INFO)],
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  if (id === 'pool_wizard:help') {
+    await interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle('How Agent Pools Work')
+        .setColor(Colors.INFO)
+        .setDescription([
+          '**What is an agent pool?**',
+          'A pool is a group of Discord bots (agents) that can be deployed into voice channels to play music or assist users.',
+          '',
+          '**How do I get agents?**',
+          'You can add your own bot tokens with `/agents add_token`, or contributors can donate tokens to your public pool.',
+          '',
+          '**What is the recommended deploy size?**',
+          'Deploy **10 agents** per server to leave room for other bots. Pools support up to **49 agents**.',
+          '',
+          '**Public vs Private pools**',
+          '• **Public** — visible on leaderboard and discover, accepts contributions',
+          '• **Private** — only you and your managers can use it',
+          '',
+          '**Ready to start?**',
+          '`/pools create` → Create your pool',
+          '`/pools discover` → Browse existing pools',
+        ].join('\n'))
+        .setTimestamp()
+      ],
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  // Leaderboard sort buttons
+  if (id.startsWith('leaderboard:')) {
+    const sort = id.split(':')[1];
+    if (!['songs_played', 'total_deployments', 'composite_score'].includes(sort)) return false;
+    const rows = await storageLayer.fetchPoolLeaderboard(10, sort);
+    const sortLabels = { songs_played: '🎵 Songs Played', total_deployments: '🚀 Deployments', composite_score: '🏆 Score' };
+    const embed = new EmbedBuilder()
+      .setTitle(`🏆 Agent Pool Leaderboard — ${sortLabels[sort]}`)
+      .setColor(Colors.INFO)
+      .setTimestamp()
+      .setFooter({ text: 'Rankings based on public pool activity' });
+    let desc = '';
+    const medals = ['🥇', '🥈', '🥉'];
+    for (let i = 0; i < (rows || []).length; i++) {
+      const r = rows[i];
+      const meta = r.meta || {};
+      const emoji = meta.emoji || '🌐';
+      const spec = meta.specialty ? ` \`${meta.specialty}\`` : '';
+      const rank = medals[i] || `**${i + 1}.**`;
+      const score = sort === 'songs_played' ? `🎵 ${r.songs_played ?? 0}` : sort === 'total_deployments' ? `🚀 ${r.total_deployments ?? 0}` : `🏆 ${r.composite_score ?? 0}`;
+      desc += `${rank} ${emoji} **${r.name}**${spec}  ${score}\n`;
+    }
+    embed.setDescription(desc || 'No data yet.');
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('leaderboard:songs_played').setLabel('🎵 Songs').setStyle(sort === 'songs_played' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('leaderboard:total_deployments').setLabel('🚀 Deploys').setStyle(sort === 'total_deployments' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('leaderboard:composite_score').setLabel('🏆 Score').setStyle(sort === 'composite_score' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    );
+    await interaction.update({ embeds: [embed], components: [row] });
+    return true;
+  }
+
+  // Quick-contribute shortcut from discover / wizard
+  if (id.startsWith('pool_contribute:')) {
+    const poolId = id.split(':')[1];
+    await interaction.reply({
+      embeds: [buildPoolEmbed('Contribute an Agent', `To contribute to pool \`${poolId}\`, use:\n\`/agents add_token pool:${poolId}\`\n\nYou'll need a Discord bot token. Your contribution will be reviewed by the pool owner.`, Colors.INFO)],
+      flags: MessageFlags.Ephemeral
+    });
+    return true;
+  }
+
+  return false;
+}
+
 export async function autocomplete(interaction) {
   try {
     const focused = interaction.options.getFocused(true);
@@ -1999,4 +2163,331 @@ export async function autocomplete(interaction) {
   } catch {
     try { await interaction.respond([]); } catch {}
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// POOL CARD BUILDER — shared rich embed used across view / leaderboard / discover
+// ──────────────────────────────────────────────────────────────────────────
+function resolvePoolColor(pool) {
+  const hex = pool?.meta?.color;
+  if (hex && /^#?[0-9a-fA-F]{6}$/.test(hex)) {
+    return parseInt(hex.replace('#', ''), 16);
+  }
+  return pool?.visibility === 'public' ? Colors.INFO : Colors.WARNING;
+}
+
+function buildPoolCard(pool, agents = [], stats = null, opts = {}) {
+  const meta    = pool.meta || {};
+  const emoji   = meta.emoji   || (pool.visibility === 'public' ? '🌐' : '🔒');
+  const spec    = meta.specialty ? `\`${meta.specialty}\`` : null;
+  const maxAgt  = pool.max_agents || 49;
+  const recDep  = pool.recommended_deploy || 10;
+  const active  = agents.filter(a => a.status === 'active').length;
+  const total   = agents.length;
+  const capBar  = buildCapacityBar(total, maxAgt);
+
+  const desc = [
+    meta.description || '',
+    spec ? `**Specialty:** ${spec}` : '',
+  ].filter(Boolean).join('\n') || `Pool \`${pool.pool_id}\``;
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${emoji} ${pool.name}`)
+    .setDescription(desc.slice(0, 4096))
+    .setColor(resolvePoolColor(pool))
+    .addFields(
+      { name: 'Owner',      value: `<@${pool.owner_user_id}>`,                   inline: true },
+      { name: 'Visibility', value: pool.visibility === 'public' ? '🌐 Public' : '🔒 Private', inline: true },
+      { name: 'Capacity',   value: `\`${capBar}\``,                              inline: false },
+      { name: 'Active',     value: `**${active}** active  ·  **${total}** total`, inline: true },
+      { name: 'Rec. Deploy', value: `**${recDep}** agents`,                      inline: true },
+    );
+
+  if (stats) {
+    embed.addFields({
+      name: '📊 Stats',
+      value: [
+        `🎵 Songs: **${stats.songs_played ?? 0}**`,
+        `🚀 Deploys: **${stats.total_deployments ?? 0}**`,
+        `🏆 Score: **${stats.composite_score ?? 0}**`,
+      ].join('  ·  '),
+      inline: false,
+    });
+  }
+
+  if (meta.banner_url) {
+    embed.setImage(meta.banner_url);
+  }
+
+  if (opts.showId !== false) {
+    embed.setFooter({ text: `Pool ID: ${pool.pool_id}` });
+  }
+
+  embed.setTimestamp();
+  return embed;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// ONBOARDING WIZARD — shown when user has no pool context in a guild
+// ──────────────────────────────────────────────────────────────────────────
+async function maybeShowOnboarding(interaction) {
+  if (!interaction.guildId) return false;
+
+  const selected = await storageLayer.getGuildSelectedPool(interaction.guildId).catch(() => null);
+  if (selected) return false; // Already configured
+
+  const userId = interaction.user.id;
+  const ownedPools = await storageLayer.fetchPoolsByOwner(userId).catch(() => []);
+  const publicPools = (await storageLayer.listPools().catch(() => [])).filter(p => p.visibility === 'public');
+
+  const embed = new EmbedBuilder()
+    .setTitle('👋 Welcome to Agent Pools')
+    .setColor(Colors.INFO)
+    .setDescription(
+      'Agent pools let servers deploy music & assistant bots powered by community-contributed Discord bot tokens.\n\n' +
+      '**This server doesn\'t have an agent pool selected yet.**\n\n' +
+      '**What would you like to do?**'
+    )
+    .addFields(
+      { name: '�� Use a Public Pool', value: `Browse **${publicPools.length}** public pool${publicPools.length !== 1 ? 's' : ''} and select one for your server.`, inline: false },
+      { name: '🔑 Create Your Own Pool', value: 'Set up a private or public pool with your own agents.', inline: false },
+      { name: '❓ Learn More', value: 'See how pools work, what agents do, and how to contribute.', inline: false },
+    );
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('pool_wizard:browse').setLabel('Browse Public Pools').setStyle(ButtonStyle.Primary).setEmoji('🌐'),
+    new ButtonBuilder().setCustomId('pool_wizard:create').setLabel('Create My Pool').setStyle(ButtonStyle.Success).setEmoji('🔑'),
+    new ButtonBuilder().setCustomId('pool_wizard:help').setLabel('How Pools Work').setStyle(ButtonStyle.Secondary).setEmoji('❓'),
+  );
+
+  await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+  return true;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// /pools profile
+// ──────────────────────────────────────────────────────────────────────────
+async function handleProfile(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const userId = interaction.user.id;
+  const poolId = interaction.options.getString('pool');
+
+  const pool = await storageLayer.fetchPool(poolId);
+  if (!pool) {
+    return interaction.editReply({ embeds: [buildPoolEmbed('Not Found', `Pool \`${poolId}\` not found.`, Colors.ERROR)] });
+  }
+
+  if (!(await canManagePool(poolId, userId))) {
+    return interaction.editReply({ embeds: [buildPoolEmbed('Not Authorized', 'Only pool owners and managers can edit the pool profile.', Colors.ERROR)] });
+  }
+
+  const description = interaction.options.getString('description');
+  const color       = interaction.options.getString('color');
+  const emoji       = interaction.options.getString('emoji');
+  const specialty   = interaction.options.getString('specialty');
+  const bannerUrl   = interaction.options.getString('banner_url');
+
+  // Validate color
+  if (color && !/^#?[0-9a-fA-F]{6}$/.test(color)) {
+    return interaction.editReply({ embeds: [buildPoolEmbed('Invalid Color', 'Color must be a hex value like `#5865F2`.', Colors.ERROR)] });
+  }
+
+  // Validate URL
+  if (bannerUrl) {
+    try { new URL(bannerUrl); } catch {
+      return interaction.editReply({ embeds: [buildPoolEmbed('Invalid URL', 'Banner URL must be a valid https:// URL.', Colors.ERROR)] });
+    }
+    if (!bannerUrl.startsWith('https://')) {
+      return interaction.editReply({ embeds: [buildPoolEmbed('Invalid URL', 'Banner URL must use HTTPS.', Colors.ERROR)] });
+    }
+  }
+
+  const currentMeta = pool.meta || {};
+  const updatedMeta = {
+    ...currentMeta,
+    ...(description !== null ? { description: description.slice(0, 200) } : {}),
+    ...(color      !== null ? { color: color.startsWith('#') ? color : '#' + color } : {}),
+    ...(emoji      !== null ? { emoji: emoji.slice(0, 4) } : {}),
+    ...(specialty  !== null ? { specialty: specialty.slice(0, 30).toLowerCase() } : {}),
+    ...(bannerUrl  !== null ? { banner_url: bannerUrl } : {}),
+  };
+
+  await storageLayer.updatePool(poolId, { meta: updatedMeta }, userId);
+
+  const updatedPool = await storageLayer.fetchPool(poolId);
+  const agents = await storageLayer.fetchPoolAgents(poolId).catch(() => []);
+  const card = buildPoolCard(updatedPool, agents);
+  card.setTitle(`✅ Profile Updated — ${updatedPool.name}`);
+
+  await interaction.editReply({ embeds: [card] });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// /pools leaderboard
+// ──────────────────────────────────────────────────────────────────────────
+async function handleLeaderboard(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const sort = interaction.options.getString('sort') || 'composite_score';
+
+  const rows = await storageLayer.fetchPoolLeaderboard(10, sort);
+
+  if (!rows || rows.length === 0) {
+    return interaction.editReply({ embeds: [buildPoolEmbed('Leaderboard Empty', 'No public pools have recorded stats yet.', Colors.INFO)] });
+  }
+
+  const sortLabels = { songs_played: '🎵 Songs Played', total_deployments: '🚀 Deployments', composite_score: '🏆 Score' };
+  const embed = new EmbedBuilder()
+    .setTitle(`🏆 Agent Pool Leaderboard — ${sortLabels[sort] || 'Score'}`)
+    .setColor(Colors.INFO)
+    .setTimestamp()
+    .setFooter({ text: 'Rankings based on public pool activity' });
+
+  let desc = '';
+  const medals = ['🥇', '🥈', '🥉'];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const meta = r.meta || {};
+    const emoji = meta.emoji || '🌐';
+    const spec = meta.specialty ? ` \`${meta.specialty}\`` : '';
+    const rank = medals[i] || `**${i + 1}.**`;
+    const score = sort === 'songs_played'       ? `🎵 ${r.songs_played ?? 0} songs`
+                : sort === 'total_deployments'  ? `🚀 ${r.total_deployments ?? 0} deploys`
+                :                                 `🏆 ${r.composite_score ?? 0} pts`;
+    const agents = r.active_agents ?? 0;
+    desc += `${rank} ${emoji} **${r.name}**${spec}\n`;
+    desc += `   ${score}  ·  ${agents} active agents  ·  <@${r.owner_user_id}>\n`;
+  }
+
+  embed.setDescription(desc.slice(0, 4096));
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('leaderboard:songs_played').setLabel('🎵 Songs').setStyle(sort === 'songs_played' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('leaderboard:total_deployments').setLabel('🚀 Deploys').setStyle(sort === 'total_deployments' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('leaderboard:composite_score').setLabel('🏆 Score').setStyle(sort === 'composite_score' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+  );
+
+  await interaction.editReply({ embeds: [embed], components: [row] });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// /pools stats
+// ──────────────────────────────────────────────────────────────────────────
+async function handleStats(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const userId = interaction.user.id;
+  let poolId = interaction.options.getString('pool');
+
+  if (!poolId && interaction.guildId) {
+    poolId = await storageLayer.getGuildSelectedPool(interaction.guildId).catch(() => null);
+  }
+
+  if (!poolId) {
+    return interaction.editReply({ embeds: [buildPoolEmbed('No Pool Selected', 'Provide a pool ID or select a pool for this server first with `/pools select`.', Colors.WARNING)] });
+  }
+
+  const [pool, agents, stats] = await Promise.all([
+    storageLayer.fetchPool(poolId),
+    storageLayer.fetchPoolAgents(poolId).catch(() => []),
+    storageLayer.fetchPoolStats(poolId).catch(() => null),
+  ]);
+
+  if (!pool) {
+    return interaction.editReply({ embeds: [buildPoolEmbed('Not Found', `Pool \`${poolId}\` not found.`, Colors.ERROR)] });
+  }
+
+  const hasAccess = await canAccessPool(userId, poolId, pool);
+  if (!hasAccess) {
+    return interaction.editReply({ embeds: [buildPoolEmbed('Access Denied', 'This pool is private.', Colors.ERROR)] });
+  }
+
+  const card = buildPoolCard(pool, agents, stats);
+  card.setTitle(`📊 Stats — ${pool.name}`);
+
+  // Add contribution breakdown
+  const byStatus = agents.reduce((acc, a) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc; }, {});
+  const statusLine = Object.entries(byStatus).map(([s, n]) => `${s}: **${n}**`).join('  ·  ') || 'No agents';
+  card.addFields({ name: 'Agent Breakdown', value: statusLine, inline: false });
+
+  await interaction.editReply({ embeds: [card] });
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// /pools discover
+// ──────────────────────────────────────────────────────────────────────────
+async function handleDiscover(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const specialty = interaction.options.getString('specialty')?.toLowerCase().trim();
+  const featuredOnly = interaction.options.getBoolean('featured') ?? false;
+
+  // Check if onboarding is needed first
+  if (!interaction.guildId) {
+    // DM context — just show pools without wizard
+  }
+
+  const allPools = await storageLayer.listPools().catch(() => []);
+  let pools = allPools.filter(p => p.visibility === 'public');
+
+  if (featuredOnly) pools = pools.filter(p => p.is_featured);
+  if (specialty)    pools = pools.filter(p => (p.meta?.specialty || '').toLowerCase().includes(specialty));
+
+  if (pools.length === 0) {
+    const hint = specialty ? ` matching \`${specialty}\`` : '';
+    return interaction.editReply({ embeds: [buildPoolEmbed('No Results', `No public pools found${hint}. Try \`/pools discover\` without filters.`, Colors.INFO)] });
+  }
+
+  // Fetch stats and agents in parallel
+  const [allStats, allAgents] = await Promise.all([
+    Promise.all(pools.map(p => storageLayer.fetchPoolStats(p.pool_id).catch(() => null))),
+    Promise.all(pools.map(p => storageLayer.fetchPoolAgents(p.pool_id).catch(() => []))),
+  ]);
+
+  // Sort: featured first, then by composite_score
+  const ranked = pools.map((p, i) => ({ pool: p, stats: allStats[i], agents: allAgents[i] }));
+  ranked.sort((a, b) => {
+    if (a.pool.is_featured !== b.pool.is_featured) return a.pool.is_featured ? -1 : 1;
+    return (b.stats?.composite_score ?? 0) - (a.stats?.composite_score ?? 0);
+  });
+
+  const embed = new EmbedBuilder()
+    .setTitle(featuredOnly ? '⭐ Featured Pools' : '🔍 Discover Pools')
+    .setColor(Colors.INFO)
+    .setTimestamp()
+    .setFooter({ text: `${pools.length} pool${pools.length !== 1 ? 's' : ''} found${specialty ? ` · specialty: ${specialty}` : ''}` });
+
+  let desc = '';
+  for (const { pool, stats, agents } of ranked.slice(0, 8)) {
+    const meta    = pool.meta || {};
+    const emoji   = meta.emoji || '🌐';
+    const spec    = meta.specialty ? ` \`${meta.specialty}\`` : '';
+    const feat    = pool.is_featured ? ' ⭐' : '';
+    const active  = (agents || []).filter(a => a.status === 'active').length;
+    const total   = (agents || []).length;
+    const score   = stats?.composite_score ?? 0;
+    const maxAgt  = pool.max_agents || 49;
+    const bar     = buildCapacityBar(total, maxAgt, 8);
+
+    desc += `${emoji}${feat} **${pool.name}**${spec}\n`;
+    desc += `   ${meta.description ? meta.description.slice(0, 80) + '…' : `\`${pool.pool_id}\``}\n`;
+    desc += `   \`${bar}\`  ·  ${active} active  ·  🏆 ${score} pts\n`;
+    desc += `   \`/pools select pool:${pool.pool_id}\`\n\n`;
+  }
+
+  embed.setDescription(desc.slice(0, 4096));
+
+  // Contribution buttons for top 3
+  const topPools = ranked.slice(0, 3);
+  const components = [];
+  if (topPools.length > 0) {
+    const row = new ActionRowBuilder().addComponents(
+      ...topPools.map(({ pool }) =>
+        new ButtonBuilder()
+          .setCustomId(`pool_contribute:${pool.pool_id}`)
+          .setLabel(`Contribute to ${pool.name.slice(0, 20)}`)
+          .setStyle(ButtonStyle.Primary)
+      )
+    );
+    components.push(row);
+  }
+
+  await interaction.editReply({ embeds: [embed], components });
 }

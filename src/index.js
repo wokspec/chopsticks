@@ -32,7 +32,7 @@ import {
 } from "./commands/music.js";
 import { handleButton as handleAssistantButton } from "./commands/assistant.js";
 import { handleButton as handleCommandsButton, handleSelect as handleCommandsSelect } from "./commands/commands.js";
-import { handleButton as handlePoolsButton, handleSelect as handlePoolsSelect } from "./commands/pools.js";
+import { handleButton as handlePoolsButton, handleSelect as handlePoolsSelect, handlePoolGlobalButton } from "./commands/pools.js";
 import {
   handleButton as handleVoiceButton,
   handleSelect as handleVoiceSelect,
@@ -828,6 +828,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
   if (interaction.isButton?.()) {
     try {
+      if (await handlePoolGlobalButton(interaction)) return;
       if (await handleAgentsButton(interaction)) return;
       if (await handlePoolsButton(interaction)) return;
       if (await handleTicketsButton(interaction)) return;

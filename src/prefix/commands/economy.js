@@ -8,6 +8,8 @@ import { addCredits } from "../../economy/wallet.js";
 import { getCooldown, setCooldown, formatCooldown } from "../../economy/cooldowns.js";
 import { listShopCategories, listShopItems } from "../../economy/shop.js";
 import { getInventory, searchItems } from "../../economy/inventory.js";
+import { addItem, removeItem } from "../../economy/inventory.js";
+import { openCrateRolls, crateTierFromItemId } from "../../game/crates.js";
 import { getGameProfile, addGameXp } from "../../game/profile.js";
 import { getDailyQuests } from "../../game/quests.js";
 import { sanitizeString } from "../../utils/validation.js";
@@ -146,36 +148,55 @@ const workCmd = {
 // ---------------------------------------------------------------------------
 const shopCmd = {
   name: "shop",
+  aliases: ["store", "market"],
   rateLimit: 5000,
   guildOnly: true,
   async execute(message, args) {
     try {
-      const category = args[0]?.toLowerCase();
-      const cats = listShopCategories();
+      const { createRequire } = await import("module");
+      const require = createRequire(import.meta.url);
+      const itemsData = require("../../economy/items.json");
 
-      if (!category || !cats.map(c => c.toLowerCase()).includes(category)) {
+      const CATEGORY_EMOJIS = { tools: "🔧", consumables: "📦", collectibles: "💎" };
+      const category = args[0]?.toLowerCase();
+      const page = Math.max(1, parseInt(args[1], 10) || 1);
+      const PAGE_SIZE = 8;
+
+      // Root: list categories with counts
+      if (!category || !Object.keys(itemsData).includes(category)) {
+        const cats = Object.keys(itemsData);
+        const lines = cats.map(c => {
+          const count = Object.keys(itemsData[c]).length;
+          const em = CATEGORY_EMOJIS[c] || "🛍️";
+          const purchasable = Object.values(itemsData[c]).filter(i => (i.price ?? 0) > 0).length;
+          return `${em} **${c}** — ${purchasable} purchasable items  \`!shop ${c}\``;
+        }).join("\n");
         const embed = new EmbedBuilder()
-          .setTitle("🏪 Shop Categories")
-          .setColor(0x5865f2)
-          .setDescription(cats.join(", ") || "No categories available.")
-          .setFooter({ text: "Use !shop <category> to see items" });
+          .setTitle("🏪 Chopsticks Shop")
+          .setColor(0x5865F2)
+          .setDescription(lines + "\n\n💡 Use `!buy <item name>` to purchase an item.")
+          .setFooter({ text: "!shop <category> [page] to browse" });
         return await message.reply({ embeds: [embed] });
       }
 
-      const items = listShopItems(category);
-      if (!items || items.length === 0) {
-        return await message.reply("No items in that category.");
-      }
+      const items = Object.values(itemsData[category] || {});
+      if (!items.length) return await message.reply("No items in that category.");
+
+      const totalPages = Math.ceil(items.length / PAGE_SIZE);
+      const slice = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+      const em = CATEGORY_EMOJIS[category] || "🛍️";
+
       const embed = new EmbedBuilder()
-        .setTitle(`🏪 Shop — ${category}`)
-        .setColor(0x5865f2)
-        .addFields(
-          items.slice(0, 10).map(i => ({
-            name: i.name,
-            value: `${i.price ?? i.cost ?? "?"} credits`,
-            inline: true,
-          }))
-        );
+        .setTitle(`${em} Shop — ${category.charAt(0).toUpperCase() + category.slice(1)}`)
+        .setColor(0x5865F2)
+        .setDescription(
+          slice.map(i => {
+            const price = i.price > 0 ? `💰 ${i.price.toLocaleString()} cr` : "🎁 Non-purchasable";
+            const rarity = i.rarity ? ` • *${i.rarity}*` : "";
+            return `${i.emoji || "📦"} **${i.name}**${rarity}\n  ${i.description || ""}\n  ${price}`;
+          }).join("\n\n")
+        )
+        .setFooter({ text: `Page ${page}/${totalPages} • !shop ${category} ${page + 1 <= totalPages ? page + 1 : 1} for more` });
       await message.reply({ embeds: [embed] });
     } catch (err) {
       botLogger.warn({ err }, "prefix:shop error");
@@ -189,31 +210,53 @@ const shopCmd = {
 // ---------------------------------------------------------------------------
 const inventoryCmd = {
   name: "inventory",
-  aliases: ["inv"],
+  aliases: ["inv", "bag", "items"],
   rateLimit: 5000,
   guildOnly: true,
   async execute(message, args) {
     try {
+      const { createRequire } = await import("module");
+      const require = createRequire(import.meta.url);
+      const itemsData = require("../../economy/items.json");
+      // Build item lookup
+      const ITEMS = {};
+      for (const cat of Object.values(itemsData)) {
+        for (const [id, item] of Object.entries(cat)) ITEMS[id] = item;
+      }
+
       const targetUser = await resolveUser(message, args);
-      const items = await getInventory(targetUser.id);
-      if (!items || items.length === 0) {
+      const rows = await getInventory(targetUser.id);
+      if (!rows || rows.length === 0) {
         return await message.reply(`📦 **${targetUser.username}**'s inventory is empty.`);
       }
-      // Group by item name
-      const counts = {};
-      for (const item of items) {
-        const name = item.item_id ?? item.itemId ?? item.name ?? "Unknown";
-        counts[name] = (counts[name] ?? 0) + (item.quantity ?? 1);
+
+      // Group by category
+      const grouped = {};
+      for (const row of rows) {
+        const id = row.item_id ?? row.itemId ?? row.id ?? "unknown";
+        const qty = row.quantity ?? 1;
+        const meta = ITEMS[id] || { name: id, emoji: "📦", category: "misc" };
+        const cat = meta.category || "misc";
+        if (!grouped[cat]) grouped[cat] = [];
+        const existing = grouped[cat].find(x => x.id === id);
+        if (existing) existing.qty += qty;
+        else grouped[cat].push({ id, name: meta.name, emoji: meta.emoji || "📦", qty, rarity: meta.rarity });
       }
-      const lines = Object.entries(counts)
-        .slice(0, 15)
-        .map(([name, qty]) => `${qty}x ${name}`)
-        .join(", ");
+
+      const CAT_EMOJIS = { tools: "🔧", consumables: "📦", collectibles: "💎", misc: "🗃️" };
+      const sections = Object.entries(grouped).map(([cat, items]) => {
+        const em = CAT_EMOJIS[cat] || "📦";
+        const lines = items.slice(0, 8).map(i => `${i.emoji} **${i.name}** ×${i.qty}`).join("\n");
+        return `${em} **${cat.charAt(0).toUpperCase() + cat.slice(1)}**\n${lines}`;
+      }).join("\n\n");
+
+      const totalItems = rows.reduce((s, r) => s + (r.quantity ?? 1), 0);
       const embed = new EmbedBuilder()
-        .setTitle("📦 Inventory")
-        .setColor(0x9b59b6)
-        .setAuthor({ name: targetUser.username })
-        .setDescription(lines);
+        .setTitle(`📦 ${targetUser.username}'s Inventory`)
+        .setColor(0x9B59B6)
+        .setDescription(sections.slice(0, 3900) || "Empty")
+        .setFooter({ text: `${totalItems} total item${totalItems !== 1 ? "s" : ""} • !use <item> to use` })
+        .setThumbnail(targetUser.displayAvatarURL?.() ?? null);
       await message.reply({ embeds: [embed] });
     } catch (err) {
       botLogger.warn({ err }, "prefix:inventory error");
@@ -509,6 +552,114 @@ export default [
   triviaCmd,
   riddleCmd,
   craftCmd,
+
+  // ── Cycle G2: Crate Opening — !open / !unbox ─────────────────────────────
+  {
+    name: "open",
+    aliases: ["unbox", "openbox", "opencrate"],
+    description: "Open a loot crate from your inventory — !open [crate name]",
+    guildOnly: true,
+    rateLimit: 3000,
+    async execute(message, args) {
+      const { createRequire } = await import("module");
+      const require = createRequire(import.meta.url);
+      const itemsData = require("../../economy/items.json");
+
+      // Find crates in inventory
+      const rows = await getInventory(message.author.id).catch(() => []);
+      const crateIds = ["loot_crate_mythic", "loot_crate_legendary", "loot_crate_epic", "loot_crate_rare", "loot_crate_common"];
+      const ownedCrates = rows.filter(r => crateIds.includes(r.item_id ?? r.itemId));
+
+      if (!ownedCrates.length) {
+        return message.reply("📦 You don't have any crates! Earn them by leveling up or completing quests.");
+      }
+
+      // Pick crate: args specify tier, default to best owned
+      let target = null;
+      if (args.length > 0) {
+        const query = args.join(" ").toLowerCase();
+        target = ownedCrates.find(r => {
+          const id = r.item_id ?? r.itemId ?? "";
+          return id.includes(query) || id.replace("loot_crate_", "").startsWith(query);
+        });
+        if (!target) return message.reply(`❌ You don't have a **${args.join(" ")}** crate. Use \`!inventory\` to see what you own.`);
+      } else {
+        // Auto-pick best tier
+        for (const cid of crateIds) {
+          const found = ownedCrates.find(r => (r.item_id ?? r.itemId) === cid);
+          if (found) { target = found; break; }
+        }
+      }
+
+      const crateId = target.item_id ?? target.itemId;
+      const crateMeta = itemsData.consumables?.[crateId] || { name: crateId, emoji: "📦", rarity: "common" };
+      const tier = crateTierFromItemId(crateId) || "common";
+
+      const TIER_COLORS = { common: 0x94A3B8, rare: 0x22C55E, epic: 0x3B82F6, legendary: 0xF59E0B, mythic: 0xA855F7 };
+      const TIER_EMOJIS = { common: "📦", rare: "🎁", epic: "🧠", legendary: "⚡", mythic: "🌌" };
+      const color = TIER_COLORS[tier] || 0x94A3B8;
+      const crateEmoji = TIER_EMOJIS[tier] || "📦";
+
+      // Stage 1: Sealed embed
+      const stage1 = new EmbedBuilder()
+        .setTitle(`${crateEmoji} Opening ${crateMeta.name}...`)
+        .setDescription("*The crate pulses with energy...*\n\n🔒 **Sealed**")
+        .setColor(color);
+      const msg = await message.reply({ embeds: [stage1] });
+
+      await new Promise(r => setTimeout(r, 900));
+
+      // Stage 2: Cracking
+      const stage2 = new EmbedBuilder()
+        .setTitle(`${crateEmoji} ${crateMeta.name} is opening...`)
+        .setDescription("*Cracks appear on the surface...*\n\n🔓 **Breaking open...**")
+        .setColor(color);
+      await msg.edit({ embeds: [stage2] }).catch(() => {});
+
+      // Remove crate from inventory
+      await removeItem(message.author.id, crateId, 1).catch(() => {});
+
+      // Roll loot
+      const { drops } = openCrateRolls(crateId, tier === "mythic" ? 3 : tier === "legendary" ? 2 : 1);
+      const countBy = new Map();
+      for (const d of drops) countBy.set(d, (countBy.get(d) || 0) + 1);
+
+      // Add items to inventory
+      for (const [id, qty] of countBy.entries()) {
+        await addItem(message.author.id, id, qty).catch(() => {});
+      }
+
+      await new Promise(r => setTimeout(r, 900));
+
+      // Stage 3: Reveal
+      const ITEMS = {};
+      for (const cat of Object.values(itemsData)) for (const [id, item] of Object.entries(cat)) ITEMS[id] = item;
+
+      const revealLines = Array.from(countBy.entries()).map(([id, qty]) => {
+        const meta = ITEMS[id] || { name: id, emoji: "📦", rarity: "common" };
+        const RARITY_EMOJIS = { mythic: "🌌", legendary: "⚡", epic: "💎", rare: "🌟", common: "⬜" };
+        const re = RARITY_EMOJIS[meta.rarity] || "⬜";
+        return `${re} ${meta.emoji || "📦"} **${meta.name}**${qty > 1 ? ` ×${qty}` : ""}`;
+      }).join("\n");
+
+      const special = tier === "mythic" ? "\n\n✨ **MYTHIC CRATE OPENED!** Incredible pull!" :
+                      tier === "legendary" ? "\n\n⚡ **LEGENDARY CRATE!** Outstanding!" : "";
+
+      const stage3 = new EmbedBuilder()
+        .setTitle(`${crateEmoji} ${crateMeta.name} Opened!`)
+        .setDescription(`**You received:**\n\n${revealLines}${special}`)
+        .setColor(color)
+        .setFooter({ text: `${tier.toUpperCase()} tier • Check !inventory for your items` });
+      await msg.edit({ embeds: [stage3] }).catch(() => {});
+
+      // Fire event bus
+      const { eventBus, Events } = await import("../../utils/eventBus.js");
+      for (const [id] of countBy.entries()) {
+        const meta = ITEMS[id] || {};
+        eventBus.fire(Events.CRATE_OPENED, { userId: message.author.id, guildId: message.guildId, crateType: tier, item: id });
+      }
+    },
+  },
 
   // ── Cycle G5: Prestige command ────────────────────────────────────────────
   {

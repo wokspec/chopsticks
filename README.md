@@ -94,7 +94,7 @@
 
 - Earn and spend Credits via `/daily` `/work` `/gather`
 - `/shop` `/buy` `/inventory` `/vault` — items and collectibles
-- `/leaderboard` `/profile` — server-wide rankings and per-user progression cards
+- `/leaderboard` `/profile` `/profilecard` — server-wide rankings, per-user progression, and a canvas-rendered profile image card
 
 </details>
 
@@ -125,6 +125,7 @@
 - `/afk [reason]` — Set AFK status; bot notifies others who mention you
 - `/color <hex>` — Preview a hex color with RGB, HSL breakdown and a rendered swatch
 - `/colorrole set <hex>` / `/colorrole clear` — Personal color role management (self-service)
+- `/statschannel set/clear/list` — Designate a voice channel as a live server-stats display (auto-renames every 10 min)
 - `/steam <profile>` — Look up a Steam community profile (no API key)
 - `/convert <amount> <from> <to>` — Currency conversion via Frankfurter (ECB data, free)
 - `/botinfo` `/ping` `/serverinfo` `/userinfo` — rich stat embeds

@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ### Added
 - `/pools help` — 3-page inline guide covering workflows, security promises, and full command reference
+- `/statschannel set/clear/list` — auto-updating voice channel stats (members, online, bots, channels, roles, boosts); refreshes every 10 min
+- `/profilecard` — canvas-rendered profile image card (avatar, level bar, XP, economy, rarity breakdown, achievement badges)
+- `/profile` achievements section — up to 8 most-recent guild achievements surfaced directly in the text embed
+- OpenTelemetry auto-instrumentation — every `pool.query` call is now wrapped in an OTel span (`db.SELECT`, `db.INSERT`, etc.) with `db.statement` attribute; zero per-callsite changes required
 
 ### Changed
 - License changed from modified MIT to standard MIT (OSI-compliant)

@@ -30,6 +30,11 @@ import {
   maybeHandlePlaylistIngestMessage,
   handleModal as handleMusicModal
 } from "./commands/music.js";
+import {
+  handleButton as handleAudiobookButton,
+  handleSelect as handleAudiobookSelect,
+  maybeHandleAudiobookMessage,
+} from "./commands/audiobook.js";
 import { handleButton as handleAssistantButton } from "./commands/assistant.js";
 import { handleButton as handleCommandsButton, handleSelect as handleCommandsSelect } from "./commands/commands.js";
 import { handleButton as handlePoolsButton, handleSelect as handlePoolsSelect, handlePoolGlobalButton } from "./commands/pools.js";
@@ -713,6 +718,7 @@ client.on(Events.MessageCreate, async message => {
   if (message.guildId && guildData) {
     void maybeHandleAudioDropMessage(message, guildData).catch(() => {});
     void maybeHandlePlaylistIngestMessage(message, guildData).catch(() => {});
+    void maybeHandleAudiobookMessage(message).catch(() => {});
   }
 
   if (!message.content?.startsWith(prefix)) return;
@@ -858,6 +864,7 @@ client.on(Events.InteractionCreate, async interaction => {
     try {
       if (await handleAgentsSelect(interaction)) return;
       if (await handlePoolsSelect(interaction)) return;
+      if (await handleAudiobookSelect(interaction)) return;
       if (await handleTicketsSelect(interaction)) return;
       if (await handleSetupSelect(interaction)) return;
       if (await handleTriviaSelect(interaction)) return;
@@ -883,6 +890,7 @@ client.on(Events.InteractionCreate, async interaction => {
       if (await handlePoolGlobalButton(interaction)) return;
       if (await handleAgentsButton(interaction)) return;
       if (await handlePoolsButton(interaction)) return;
+      if (await handleAudiobookButton(interaction)) return;
       if (await handleTicketsButton(interaction)) return;
       if (await handleSetupButton(interaction)) return;
       if (await handleTriviaButton(interaction)) return;

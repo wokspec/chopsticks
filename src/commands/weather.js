@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getWeather, wmoLabel } from "../utils/openmeteo.js";
+import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
   category: "util",
@@ -17,7 +18,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction) {
   await interaction.deferReply();
-
+  await withTimeout(interaction, async () => {
   const location = interaction.options.getString("location", true).trim();
 
   // Try to use the shared Redis client if available
@@ -53,4 +54,5 @@ export async function execute(interaction) {
     .setTimestamp();
 
   await interaction.editReply({ embeds: [embed] });
+  }, { label: "weather" });
 }

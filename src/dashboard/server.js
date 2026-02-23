@@ -39,11 +39,15 @@ import Joi from "joi";
 import { generateCorrelationId } from "../utils/logger.js";
 import { installProcessSafety } from "../utils/processSafety.js";
 import { createRequire as _cjsRequire } from "node:module";
+import compression from "compression";
 const _require = _cjsRequire(import.meta.url);
 const jwt = _require("jsonwebtoken");
 
 const app = express();
 installProcessSafety("dashboard", dashboardLogger);
+
+// Gzip/deflate all text responses — critical for 200k DAU serving JSON/HTML
+app.use(compression());
 
 // Apply modern security middleware FIRST
 applySecurityMiddleware(app);

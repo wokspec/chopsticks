@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = { category: "fun", guildOnly: false };
@@ -36,7 +36,7 @@ export async function execute(interaction) {
   const title = interaction.options.getString("title", true).trim();
 
   try {
-    const { statusCode, body } = await request(ANILIST_URL, {
+    const { statusCode, body } = await httpRequest("anilist", ANILIST_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = { category: "util", guildOnly: false };
@@ -21,7 +21,7 @@ async function fetchGitHub(path) {
     "Accept": "application/vnd.github+json"
   };
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const { statusCode, body } = await request(`${GITHUB_API}${path}`, { headers });
+  const { statusCode, body } = await httpRequest("github", `${GITHUB_API}${path}`, { headers });
   if (statusCode === 404) return null;
   if (statusCode !== 200) throw new Error(`HTTP ${statusCode}`);
   return body.json();

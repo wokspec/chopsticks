@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = {
@@ -46,7 +46,7 @@ export async function execute(interaction) {
 
   let xml = "";
   try {
-    const { statusCode, body } = await request(url, {
+    const { statusCode, body } = await httpRequest("steam", url, {
       headers: { "User-Agent": "Chopsticks-Discord-Bot/1.0" },
       bodyTimeout: 8000,
       headersTimeout: 8000,

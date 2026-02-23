@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = { category: "fun", guildOnly: false };
@@ -22,7 +22,7 @@ export async function execute(interaction) {
   if (date) params.set("date", date);
 
   try {
-    const { statusCode, body } = await request(`https://api.nasa.gov/planetary/apod?${params}`, {
+    const { statusCode, body } = await httpRequest("apod", `https://api.nasa.gov/planetary/apod?${params}`, {
       headers: { "User-Agent": "Chopsticks-Discord-Bot/1.0" }
     });
     if (statusCode !== 200) throw new Error(`HTTP ${statusCode}`);

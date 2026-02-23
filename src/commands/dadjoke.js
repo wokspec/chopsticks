@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = {
@@ -17,7 +17,7 @@ export async function execute(interaction) {
   let joke = "Why don't scientists trust atoms? Because they make up everything!";
 
   try {
-    const { statusCode, body } = await request("https://icanhazdadjoke.com/", {
+    const { statusCode, body } = await httpRequest("dadjoke", "https://icanhazdadjoke.com/", {
       headers: {
         "User-Agent": "Chopsticks-Discord-Bot/1.0 (https://github.com/WokSpec/Chopsticks)",
         "Accept": "application/json"

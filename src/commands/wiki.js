@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = { category: "fun", guildOnly: false };
@@ -17,7 +17,7 @@ export async function execute(interaction) {
 
   try {
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
-    const { statusCode, body } = await request(url, {
+    const { statusCode, body } = await httpRequest("wikipedia", url, {
       headers: { "User-Agent": "Chopsticks-Discord-Bot/1.0" }
     });
 

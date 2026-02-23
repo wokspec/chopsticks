@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = {
@@ -17,7 +17,7 @@ export async function execute(interaction) {
   let fact = "Did you know? The world is full of fascinating facts — try again in a moment!";
 
   try {
-    const { statusCode, body } = await request("https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", {
+    const { statusCode, body } = await httpRequest("uselessfacts", "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en", {
       headers: {
         "User-Agent": "Chopsticks-Discord-Bot/1.0",
         "Accept": "application/json"

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { request } from "undici";
+import { httpRequest } from "../utils/httpFetch.js";
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = { category: "util", guildOnly: false };
@@ -17,7 +17,7 @@ export async function execute(interaction) {
 
   try {
     const searchUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1&fields=key,title,author_name,first_publish_year,number_of_pages_median,cover_i,subject,language`;
-    const { statusCode, body } = await request(searchUrl, {
+    const { statusCode, body } = await httpRequest("openlibrary", searchUrl, {
       headers: { "User-Agent": "Chopsticks-Discord-Bot/1.0" }
     });
     if (statusCode !== 200) throw new Error(`HTTP ${statusCode}`);

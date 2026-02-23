@@ -690,6 +690,16 @@ export async function updateAgentBotStatus(agentId, status, actorUserId = '') {
   return res.rowCount > 0;
 }
 
+/** Bulk-reset agents incorrectly marked corrupt/failed back to active so runner retries them. */
+export async function resetCorruptAgents() {
+  const p = getPool();
+  const res = await p.query(
+    "UPDATE agent_bots SET status = 'active', updated_at = $1 WHERE status IN ('corrupt', 'failed') RETURNING agent_id",
+    [Date.now()]
+  );
+  return res.rows.map(r => r.agent_id);
+}
+
 export async function updateAgentBotProfile(agentId, profile) {
   const p = getPool();
   const updateSql = "UPDATE agent_bots SET profile = $1, updated_at = $2 WHERE agent_id = $3 RETURNING agent_id";

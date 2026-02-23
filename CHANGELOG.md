@@ -10,6 +10,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ---
 
+## [2.0.0] — feat/prefix-first
+
+### Summary
+Major architectural milestone: Prefix-First architecture, 50+ new prefix commands, agent pool hardening, SVG card system, event bus, and operator monitoring dashboard.
+
+### Added — Phase A/B: Prefix-First Architecture
+- **26 slash commands removed** (coinflip, roll, 8ball, choose, fun, fact, dadjoke, joke, color, urban, wiki, github, anime, book, avatar, serverinfo, invite, steam, apod, balance, daily, work, inventory, xp, ping, userinfo) — freed slots for future feature expansion
+- **Slash command count: 74/100** (26 freed from 100 cap)
+- All 26 removed commands re-implemented as prefix commands with enhanced functionality
+
+### Added — Phase B: Prefix Command Expansion (P3–P9)
+- **P3 Fun Pack:** `!meme`, `!wyr`, `!tod [truth|dare] [spicy]`, `!ship @u1 @u2`, `!quote`, `!riddle`, `!trivia`
+- **P4 Text Toys:** `!mock`, `!reverse`, `!clap`, `!emojify`, `!rate`, `!rps`, `!slots`, `!pp`, `!ascii`
+- **P5 Help Revamp:** 3-mode `!help` — root overview, category detail, command detail — with emoji categories
+- **P6 Animal & Reaction Pack:** `!cat !dog !fox !duck !shibe !bird`, `!hug !pat !slap !kiss !cuddle !wave !poke !bite`
+- **P7 Entertainment Pack:** `!pokemon`, `!rickmorty`, `!show`, `!cocktail`, `!meal`, `!kanye`, `!chuck`, `!bored`
+- **P8 Knowledge Pack:** `!define`, `!advice`, `!number`, `!country`, `!iss`, `!spacex`, `!bible`, `!qr`, `!shorten`
+- **P9 Utility Power Pack:** `!calc`, `!timestamp`, `!encode`/`!decode` (base64), `!hash` (SHA-256)
+
+### Added — Phase C: Agent Pool Hardening (A1–A4)
+- **A2 Heartbeat:** 15s WS ping/pong frames to all agents; `pong` handler updates `lastSeen` + EMA RTT
+- **A3 Health Scoring:** 0–100 composite health score per agent (RTT, error rate, idle bonus); health-weighted routing in `listIdleAgentsInGuild`
+- **Error window:** Rolling 60s error tracking per agent for health score degradation
+
+### Added — Phase D: All Tests Green
+- Fixed 6 pre-existing test failures (`memberPermissions` mock, stale `ban.js`/`kick.js` references)
+- **856 passing, 0 failing** ✅
+
+### Added — Phase E: Game & Economy Expansion
+- **`!fish` / `!mine` / `!hunt`** — 3 new prefix mini-games with weighted loot tables, 45/60/90s cooldowns
+- **`!open` / `!unbox`** — 3-stage animated crate opening (sealed → cracking → reveal) with tier-colored embeds
+- **`!prestige`** — prestige system at Level 50+, resets XP/level, awards 5000×prestige credits, 10 tiered titles
+- **G3: Shop/Inventory overhaul** — paginated `!shop` with item descriptions/rarities, `!inventory` grouped by category
+
+### Added — Phase F: SVG Card System
+- `buildProfileCardSvg` — 900×280px profile card (level badge, XP bar, credits, prestige)
+- `buildWelcomeCardSvg` — 900×260px welcome card (member count, server name, accent stripe)
+- `buildLevelUpCardSvg` — 900×240px level-up card (level transition, XP gained, crate granted)
+- `buildBattleCardSvg` — 900×320px battle result card (winner/loser, wager, rounds)
+- `svgToPngBuffer()` — zero-temp-file SVG→PNG via ImageMagick spawn; graceful null on failure
+- `guildMemberAdd.js` now attaches `welcome.png` card to welcome messages (optional, never breaks welcome)
+
+### Added — Phase G: Unification
+- `src/utils/eventBus.js` — typed in-process `GameEventBus` with 10 events (FISH_CAUGHT, ORE_MINED, PRESTIGE_ACHIEVED, MEMBER_JOINED, etc.)
+- `src/utils/colors.js` — canonical 12-color palette for visual consistency across all embeds
+- `src/dashboard/server.js` — `GET /api/monitor/overview` (agent health, economy snapshot, guild overview, process health) + `GET /api/monitor/errors` (in-memory error feed)
+- `src/utils/modernLogger.js` — in-memory error buffer (`global._recentErrors`, capped at 500) fed by U3 dashboard
+
+---
+
 ## [1.5.1] — feat/harden-and-polish (Cycles 16–18)
 
 ### Added

@@ -529,6 +529,11 @@ export async function fetchAgentToken(agentId) {
   return pg.fetchAgentToken(agentId);
 }
 
+export async function resetCorruptAgents() {
+  const pg = await getPg();
+  return pg.resetCorruptAgents();
+}
+
 export async function updateAgentBotStatus(agentId, status, actorUserId) {
   const pg = await getPg();
   return pg.updateAgentBotStatus(agentId, status, actorUserId);

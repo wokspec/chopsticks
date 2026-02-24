@@ -403,6 +403,12 @@ client.once(Events.ClientReady, async () => {
   
   // Give agentManager a reference to the Discord client for notifications (C3h)
   if (global.agentManager) global.agentManager.discordClient = client;
+
+  // Seed achievement definitions into DB (idempotent)
+  try {
+    const { ensureAchievementsSeed } = await import('./game/achievements.js');
+    await ensureAchievementsSeed();
+  } catch {}
   
   // Auto-register all commands in help registry
   try {

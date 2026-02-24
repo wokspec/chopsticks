@@ -401,6 +401,9 @@ client.once(Events.ClientReady, async () => {
   botLogger.info(`✅ Ready as ${client.user.tag}`);
   botLogger.info(`📊 Serving ${client.guilds.cache.size} guilds`);
   
+  // Give agentManager a reference to the Discord client for notifications (C3h)
+  if (global.agentManager) global.agentManager.discordClient = client;
+  
   // Auto-register all commands in help registry
   try {
     await registerAllCommands();

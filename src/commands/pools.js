@@ -121,6 +121,12 @@ export const data = new SlashCommandBuilder()
             .setAutocomplete(true)
             .setRequired(true)
         )
+        .addChannelOption((opt) =>
+          opt
+            .setName('notify_channel')
+            .setDescription('Channel to notify when pool agents change (optional)')
+            .setRequired(false)
+        )
     )
     .addSubcommand((sub) =>
       sub
@@ -392,6 +398,18 @@ export async function execute(interaction) {
 }
 
 // ========== HELPERS ==========
+
+/**
+ * C3a: Compute pool tier based on active agent count.
+ * Bronze → Silver → Gold → Platinum
+ */
+function computePoolTier(activeAgentCount) {
+  if (activeAgentCount >= 20) return { label: '🏆 Platinum', color: 0xe5e4e2 };
+  if (activeAgentCount >= 10) return { label: '🥇 Gold', color: 0xffd700 };
+  if (activeAgentCount >= 5)  return { label: '🥈 Silver', color: 0xc0c0c0 };
+  if (activeAgentCount >= 1)  return { label: '🥉 Bronze', color: 0xcd7f32 };
+  return { label: '⚪ Unranked', color: 0x95a5a6 };
+}
 
 function isMaster(userId) {
   return isBotOwner(userId);
@@ -1000,6 +1018,8 @@ async function handleList(interaction) {
     const pool = visiblePools[i];
     const agents = allAgents[i];
     const totalAgents = agents ? agents.length : 0;
+    const activeAgents = agents ? agents.filter(a => a.status === 'active') : [];
+    const tier = computePoolTier(activeAgents.length);
     
     // Owner display
     const owner = `<@${pool.owner_user_id}>`;
@@ -1009,9 +1029,7 @@ async function handleList(interaction) {
     if (totalAgents === 0) {
       agentStatus = '**0 agents** ⚠️';
     } else {
-      const activeAgents = agents.filter(a => a.status === 'active');
       const inactiveAgents = totalAgents - activeAgents.length;
-      
       if (activeAgents.length === 0) {
         agentStatus = `**${totalAgents} agents** (⚠️ all inactive)`;
       } else if (inactiveAgents === 0) {
@@ -1021,8 +1039,8 @@ async function handleList(interaction) {
       }
     }
     
-    let fieldValue = `${pool.visibility === 'public' ? '**Public**' : '**Private**'} | Owner: ${owner}\n`;
-    fieldValue += `${agentStatus}`;
+    let fieldValue = `${tier.label} | ${pool.visibility === 'public' ? '**Public**' : '**Private**'} | Owner: ${owner}\n`;
+    fieldValue += agentStatus;
     
     embed.addFields({
       name: `${pool.name} \`${pool.pool_id}\``,
@@ -1264,6 +1282,7 @@ async function handleView(interaction) {
   const agents = await storageLayer.fetchPoolAgents(poolId);
   const agentCount = agents ? agents.length : 0;
   const activeAgents = agents ? agents.filter(a => a.status === 'active') : [];
+  const tier = computePoolTier(activeAgents.length);
   const meta = pool.meta || {};
   const tags = meta.tags ? meta.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
   const { label: completenessLabel, score, missing } = renderCompleteness(pool);
@@ -1281,6 +1300,7 @@ async function handleView(interaction) {
     .addFields(
       { name: 'Owner',       value: `<@${pool.owner_user_id}>`,                    inline: true },
       { name: 'Visibility',  value: pool.visibility === 'public' ? '🌐 Public' : '🔒 Private', inline: true },
+      { name: 'Tier',        value: tier.label,                                    inline: true },
       { name: 'Profile',     value: completenessLabel,                             inline: true },
       { name: 'Total Agents', value: `${agentCount}`,                              inline: true },
       { name: 'Active Agents', value: `${activeAgents.length}`,                   inline: true },
@@ -1304,8 +1324,9 @@ async function handleView(interaction) {
       const agentList = agents
         .slice(0, 10)
         .map((a) => {
-          const statusText = a.status === 'active' ? 'active' : 'inactive';
-          return `• ${a.tag} (\`${a.agent_id}\`) - ${statusText}`;
+          const statusText = a.status === 'active' ? '✅' : '⚠️';
+          const caps = Array.isArray(a.capabilities) && a.capabilities.length ? ` [${a.capabilities.join(', ')}]` : '';
+          return `${statusText} ${a.tag} (\`${a.agent_id}\`)${caps}`;
         })
         .join('\n');
       
@@ -1379,6 +1400,16 @@ async function handleSelectPool(interaction) {
   // Set guild's selected pool
   await storageLayer.setGuildSelectedPool(guildId, poolId);
 
+  // C3h: Save optional notify_channel to guild data
+  const notifyChannel = interaction.options.getChannel('notify_channel', false);
+  if (notifyChannel) {
+    try {
+      const guildData = await storageLayer.loadGuildData(guildId) || {};
+      guildData.poolNotifyChannelId = notifyChannel.id;
+      await storageLayer.saveGuildData(guildId, guildData);
+    } catch { /* ignore — non-critical */ }
+  }
+
   const poolAgents = await storageLayer.fetchPoolAgents(poolId);
   const totalAgents = Array.isArray(poolAgents) ? poolAgents.length : 0;
   const activeAgents = Array.isArray(poolAgents)
@@ -1421,6 +1452,10 @@ async function handleSelectPool(interaction) {
       ? 'Use /agents deploy to deploy agents from this pool'
       : 'This pool has no active agents yet. Ask the pool owner to add agents with /agents add_token.'
   });
+
+  if (notifyChannel) {
+    embed.addFields({ name: '🔔 Notifications', value: `Pool change alerts will be sent to <#${notifyChannel.id}>.`, inline: false });
+  }
 
   await interaction.editReply({ embeds: [embed] });
 }
@@ -1685,20 +1720,28 @@ async function handleApprove(interaction) {
     await evaluatePoolBadges(pool.pool_id).catch(() => {});
 
     const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${agent.client_id}&permissions=277293639680&scope=bot%20applications.commands`;
-    await interaction.editReply({ embeds: [
-      new EmbedBuilder()
-        .setTitle('✅ Contribution Approved')
-        .setColor(Colors.SUCCESS)
-        .setDescription(`**${agent.tag}** is now active in **${pool.name}**.`)
-        .addFields(
-          { name: 'Agent ID', value: `\`${agentId}\``, inline: true },
-          { name: 'Pool', value: `\`${agent.pool_id}\``, inline: true },
-          { name: 'Status', value: '🟢 Active', inline: true },
-          { name: '🔗 Invite to your server', value: `[Click here to invite ${agent.tag}](${inviteUrl})\n\nAgent must join your server before it can receive tasks.` }
-        )
-        .setFooter({ text: 'AgentRunner will start this agent — then invite it to go live' })
-        .setTimestamp()
-    ] });
+    const inviteBtn = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setLabel(`➕ Add ${agent.tag} to your server`)
+        .setURL(inviteUrl)
+    );
+    await interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle('✅ Contribution Approved')
+          .setColor(Colors.SUCCESS)
+          .setDescription(`**${agent.tag}** is now active in **${pool.name}**.\n\n> **Next step:** Click below to invite the agent to your server.`)
+          .addFields(
+            { name: 'Agent ID', value: `\`${agentId}\``, inline: true },
+            { name: 'Pool', value: `\`${agent.pool_id}\``, inline: true },
+            { name: 'Status', value: '🟢 Active', inline: true }
+          )
+          .setFooter({ text: 'AgentRunner starts the bot — invite it to go live' })
+          .setTimestamp()
+      ],
+      components: [inviteBtn]
+    });
   } catch (err) {
     return interaction.editReply({ embeds: [buildPoolEmbed('Approve Failed', err.message || 'Unexpected error.', Colors.ERROR)] });
   }
@@ -2680,6 +2723,14 @@ async function handleStats(interaction) {
   const byStatus = agents.reduce((acc, a) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc; }, {});
   const statusLine = Object.entries(byStatus).map(([s, n]) => `${s}: **${n}**`).join('  ·  ') || 'No agents';
   card.addFields({ name: 'Agent Breakdown', value: statusLine, inline: false });
+
+  // C3e: Capacity alert
+  const maxAgents = pool.max_agents || 49;
+  const activeCount = agents.filter(a => a.status === 'active').length;
+  const capacityPct = Math.round((activeCount / maxAgents) * 100);
+  card.addFields({ name: '📊 Capacity', value: `${activeCount} / ${maxAgents} (${capacityPct}%)${capacityPct >= 90 ? ' 🔴 Near limit' : capacityPct >= 75 ? ' 🟡 Filling up' : ' 🟢 OK'}`, inline: false });
+  const tier = computePoolTier(activeCount);
+  card.addFields({ name: '🏅 Tier', value: tier.label, inline: true });
 
   await interaction.editReply({ embeds: [card] });
 }

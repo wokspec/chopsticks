@@ -470,6 +470,14 @@ export async function ensureSchema() {
     logger.error("Error adding max_contributions_per_user:", { error: err.message });
   }
 
+  // Migration: add capabilities column to agent_bots (C3d)
+  try {
+    await p.query("ALTER TABLE agent_bots ADD COLUMN IF NOT EXISTS capabilities TEXT[] DEFAULT '{}'");
+    logger.debug("capabilities column ensured in agent_bots.");
+  } catch (err) {
+    logger.error("Error adding capabilities to agent_bots:", { error: err.message });
+  }
+
   logger.info("ensureSchema: complete");
 }
 
@@ -740,6 +748,17 @@ export async function fetchAgentToken(agentId) {
   if (!res.rows[0]) return null;
   const { token, enc_version, pool_id, pool_created_at } = res.rows[0];
   return decrypt(token, Number(enc_version), pool_id, Number(pool_created_at));
+}
+
+/** Update the capabilities array for an agent (C3d). */
+export async function updateAgentCapabilities(agentId, capabilities) {
+  const p = getPool();
+  const caps = Array.isArray(capabilities) ? capabilities : [];
+  const res = await p.query(
+    "UPDATE agent_bots SET capabilities = $1, updated_at = $2 WHERE agent_id = $3 RETURNING agent_id",
+    [caps, Date.now(), agentId]
+  );
+  return res.rowCount > 0;
 }
 
 export async function updateAgentBotStatus(agentId, status, actorUserId = '') {

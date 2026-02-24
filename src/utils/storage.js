@@ -576,6 +576,11 @@ export async function updateAgentBotProfile(agentId, profile) {
   return pg.updateAgentBotProfile(agentId, profile);
 }
 
+export async function updateAgentCapabilities(agentId, capabilities) {
+  const pg = await getPg();
+  return pg.updateAgentCapabilities(agentId, capabilities);
+}
+
 export async function fetchAgentBotProfile(agentId) {
   const pg = await getPg();
   return pg.fetchAgentBotProfile(agentId);

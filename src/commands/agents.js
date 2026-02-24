@@ -18,6 +18,7 @@ import {
   fetchAgentToken,
   revokeAgentToken,
   updateAgentBotStatus,
+  updateAgentCapabilities,
   deleteAgentBot,
   updateAgentBotProfile,
   fetchAgentBotProfile,
@@ -1009,6 +1010,11 @@ export const data = new SlashCommandBuilder()
           .setAutocomplete(true)
           .setRequired(false)
       )
+      .addStringOption(o =>
+        o.setName("capabilities")
+          .setDescription("What this agent can do (comma-separated: music,chat,tts,moderation)")
+          .setRequired(false)
+      )
   )
   .addSubcommand(s =>
     s
@@ -1211,7 +1217,8 @@ export async function execute(interaction) {
           const state = liveStatus ? (liveStatus.ready ? (liveStatus.busyKey ? `busy(${liveStatus.busyKind || "?"})` : "idle") : "down") : "offline";
           const inGuildState = liveStatus?.guildIds.includes(guildId) ? "in-guild" : "not-in-guild";
           const profileState = a.profile ? "Yes" : "No";
-          return `**${a.agent_id}** (${a.tag})\nDB: \`${a.status}\` | Live: \`${state}\` | Guild: \`${inGuildState}\` | Profile: \`${profileState}\``;
+          const caps = Array.isArray(a.capabilities) && a.capabilities.length ? a.capabilities.join(', ') : 'none';
+          return `**${a.agent_id}** (${a.tag})\nDB: \`${a.status}\` | Live: \`${state}\` | Guild: \`${inGuildState}\` | Profile: \`${profileState}\` | Caps: \`${caps}\``;
         });
 
       if (!descriptionLines.length) {
@@ -1938,8 +1945,12 @@ export async function execute(interaction) {
     const clientId = interaction.options.getString("client_id", true);
     const tag = interaction.options.getString("tag", true);
     const poolOption = interaction.options.getString("pool", false);
+    const capabilitiesRaw = interaction.options.getString("capabilities", false);
     const agentId = `agent${clientId}`;
     const userId = interaction.user.id;
+    const parsedCapabilities = capabilitiesRaw
+      ? capabilitiesRaw.split(/[\s,]+/).map(s => s.trim().toLowerCase()).filter(Boolean)
+      : [];
 
     // Defer immediately since we're doing validation and database queries
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -2145,6 +2156,9 @@ export async function execute(interaction) {
         } catch { /* DM may fail if owner has DMs closed — ignore */ }
 
         const operationMsg = result.operation === 'inserted' ? 'submitted' : 'updated';
+        if (parsedCapabilities.length) {
+          await updateAgentCapabilities(agentId, parsedCapabilities).catch(() => {});
+        }
         await interaction.editReply({
           embeds: [{
             title: 'Contribution submitted',
@@ -2155,6 +2169,7 @@ export async function execute(interaction) {
               { name: 'Pool', value: `\`${poolId}\``, inline: true },
               { name: 'Status', value: 'pending', inline: true },
               { name: 'Token', value: `\`${maskToken(token)}\``, inline: false },
+              ...(parsedCapabilities.length ? [{ name: 'Capabilities', value: parsedCapabilities.join(', '), inline: false }] : []),
               { 
                 name: 'Review',
                 value: 'Pool owner reviews and activates if approved.'
@@ -2167,24 +2182,31 @@ export async function execute(interaction) {
         // Adding to own pool - direct activation
         const result = await insertAgentBot(agentId, token, clientId, botUser.tag, poolId, userId);
         const operationMsg = result.operation === 'inserted' ? 'added' : 'updated';
+        if (parsedCapabilities.length) {
+          await updateAgentCapabilities(agentId, parsedCapabilities).catch(() => {});
+        }
         
         const inviteUrl = buildMainInvite(clientId);
+        const inviteBtn = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setLabel(`➕ Add ${botUser.tag} to this server`)
+            .setURL(inviteUrl)
+        );
         await interaction.editReply({
           embeds: [{
             title: `Agent ${operationMsg}`,
-            description: `Agent **${botUser.tag}** is in your pool.`,
+            description: `Agent **${botUser.tag}** is registered and will start automatically.\n\n> **Next step:** Click the button below to invite the bot to your server so it can receive tasks.`,
             color: 0x57f287,
             fields: [
               { name: 'Agent ID', value: `\`${agentId}\``, inline: true },
               { name: 'Pool', value: `\`${poolId}\``, inline: true },
-              { name: 'Status', value: 'active', inline: true },
-              {
-                name: '🔗 Invite to this server',
-                value: `[Click here to add ${botUser.tag} to this server](${inviteUrl})\n\nAgentRunner will start the bot — click the link to let it join your guild.`
-              }
+              { name: 'Status', value: '🟢 Active', inline: true },
+              ...(parsedCapabilities.length ? [{ name: '🏷️ Capabilities', value: parsedCapabilities.join(', '), inline: false }] : []),
             ],
             timestamp: new Date()
-          }]
+          }],
+          components: [inviteBtn]
         });
       }
       
@@ -2501,15 +2523,28 @@ export async function execute(interaction) {
     try {
       const profile = await fetchAgentBotProfile(agentId);
       if (profile) {
-        await replyEmbedWithJson(
-          interaction,
-          "Agent profile",
-          `Agent ${agentId}`,
-          profile,
-          `agent-${agentId}-profile.json`
-        );
+        // C3g: Surface agent personality in a readable embed
+        const embed = new EmbedBuilder()
+          .setTitle(`🤖 Agent Profile — \`${agentId}\``)
+          .setColor(Colors.INFO)
+          .setTimestamp();
+
+        if (profile.name) embed.addFields({ name: 'Name', value: String(profile.name), inline: true });
+        if (profile.persona || profile.personality) embed.addFields({ name: '🎭 Personality', value: String(profile.persona || profile.personality).slice(0, 512), inline: false });
+        if (profile.style) embed.addFields({ name: '🎨 Style', value: String(profile.style), inline: true });
+        if (profile.voice) embed.addFields({ name: '🎙️ Voice', value: String(profile.voice), inline: true });
+        if (profile.specialty) embed.addFields({ name: '⭐ Specialty', value: String(profile.specialty), inline: true });
+        if (profile.description) embed.addFields({ name: 'Description', value: String(profile.description).slice(0, 512), inline: false });
+
+        const knownFields = new Set(['name','persona','personality','style','voice','specialty','description']);
+        const extra = Object.entries(profile).filter(([k]) => !knownFields.has(k));
+        if (extra.length) {
+          embed.addFields({ name: 'Extra', value: extra.map(([k,v]) => `\`${k}\`: ${JSON.stringify(v)}`).join('\n').slice(0, 512), inline: false });
+        }
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
       } else {
-        await replyEmbed(interaction, "Agent profile", `No profile set for agent ${agentId}.`);
+        await replyEmbed(interaction, "Agent profile", `No profile set for agent ${agentId}. Use \`/agents set_profile\` to configure personality.`);
       }
     } catch (error) {
       botLogger.error({ err: error }, "Error fetching agent profile");

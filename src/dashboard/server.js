@@ -78,6 +78,7 @@ app.use((req, res, next) => {
   const startedAt = Date.now();
   req.requestId = requestId;
   res.setHeader("x-correlation-id", requestId);
+  res.setHeader("X-Request-Id", requestId);
   dashboardLogger.info({ requestId, method: req.method, path: req.path }, "dashboard request");
   res.on("finish", () => {
     dashboardLogger.info(

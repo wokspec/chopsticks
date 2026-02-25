@@ -22,6 +22,7 @@ import { listShopItems, findShopItem } from "../economy/shop.js";
 import { getMultiplier, getBuff } from "../game/buffs.js";
 import { JOBS, WORK_COOLDOWN } from "../economy/jobs.js";
 import { DIFFICULTIES, BATTLE_COOLDOWN } from "./fight.js";
+import { GATHER_COOLDOWN } from "./gather.js";
 import { listRecipes, craftRecipe } from "../game/crafting.js";
 import { botLogger } from "../utils/modernLogger.js";
 
@@ -554,7 +555,7 @@ async function runGatherAction(userId, { toolId, zone }) {
     await addToCollection(userId, zone || "any", r.itemId, r.rarity);
   }
 
-  await setCooldown(userId, "gather", 5 * 60 * 1000);
+  await setCooldown(userId, "gather", GATHER_COOLDOWN);
 
   const rarityXp = { common: 12, rare: 20, epic: 35, legendary: 55, mythic: 120 };
   const xpBase = results.reduce((sum, r) => sum + (rarityXp[r.rarity] || 12), 0);

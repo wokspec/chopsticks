@@ -45,6 +45,17 @@ export const userWalletGauge = new client.Gauge({
   registers: [register],
 });
 
+export const betsPlacedCounter = new client.Counter({
+  name: "chopsticks_economy_bets_placed_total",
+  help: "Total casino bets placed",
+  labelNames: ["game"], // game: slots | blackjack | coinflip | roulette
+  registers: [register],
+});
+
+export function trackBet(game) {
+  betsPlacedCounter.inc({ game: game ?? "unknown" });
+}
+
 // === Music Metrics ===
 export const musicPlayCounter = new client.Counter({
   name: "chopsticks_music_tracks_played_total",

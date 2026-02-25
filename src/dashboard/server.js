@@ -2758,6 +2758,12 @@ app.post("/api/guild/:id/assistant/config", requireAuth, rateLimitDashboard, req
     return;
   }
 
+  const body = req.body ?? {};
+  try { validateInput(assistantConfigSchema.unknown(true), body); } catch (e) {
+    res.status(400).json({ ok: false, error: "validation", details: e.message });
+    return;
+  }
+
   const {
     enabled,
     maxListenSec,
@@ -2768,7 +2774,7 @@ app.post("/api/guild/:id/assistant/config", requireAuth, rateLimitDashboard, req
     maxSessions,
     voice,
     voicePresets
-  } = req.body ?? {};
+  } = body;
 
   const out = await setAssistantConfig(guildId, {
     enabled: enabled === undefined ? undefined : Boolean(enabled),

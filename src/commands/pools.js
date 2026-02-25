@@ -31,6 +31,7 @@ function checkPoolWriteRateLimit(userId, cooldownMs = 5000) {
 }
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: false, // Pool management can be done outside guilds
   userPerms: [],
   category: "pools"

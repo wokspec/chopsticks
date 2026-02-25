@@ -29,6 +29,7 @@ import {
 import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
+  deployGlobal: false,
   name: 'audiobook',
   description: 'Read books aloud in your voice channel',
   category: 'entertainment',

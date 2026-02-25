@@ -3,6 +3,7 @@ import { httpFetch } from "../utils/httpFetch.js";
 import { cacheGet, cacheSet } from "../utils/cache.js";
 
 export const meta = {
+  deployGlobal: true,
   guildOnly: false,
   userPerms: [],
   category: "tools"

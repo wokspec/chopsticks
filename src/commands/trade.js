@@ -7,7 +7,8 @@ import { getPool } from '../utils/storage_pg.js';
 import crypto from 'node:crypto';
 import { botLogger } from "../utils/modernLogger.js";
 
-export const meta = { category: 'economy', guildOnly: true };
+export const meta = {
+  deployGlobal: true, category: 'economy', guildOnly: true };
 
 export const data = new SlashCommandBuilder()
   .setName('trade')

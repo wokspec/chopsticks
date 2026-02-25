@@ -45,6 +45,7 @@ function boolWord(v) {
 }
 
 export const meta = {
+  deployGlobal: true,
   category: "economy",
   guildOnly: true,
 };

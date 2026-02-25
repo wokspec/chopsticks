@@ -6,6 +6,7 @@ import {
   EmbedBuilder,
 } from "discord.js";
 import { setCustomCmd, deleteCustomCmd, getCustomCmd, listCustomCmds } from "../tools/customcmd/store.js";
+import { sanitizeString } from "../utils/validation.js";
 
 export const meta = {
   name: "customcmd",
@@ -66,7 +67,7 @@ export async function execute(interaction) {
     if (all.length >= 100) return interaction.reply({ content: "> Maximum of 100 custom commands per server.", flags: MessageFlags.Ephemeral });
 
     await setCustomCmd(guildId, name, {
-      response: interaction.options.getString("response", true),
+      response: sanitizeString(interaction.options.getString("response", true)).slice(0, 2000),
       asEmbed: interaction.options.getBoolean("as_embed") ?? false,
       embedTitle: interaction.options.getString("embed_title") ?? null,
       requiredRoleId: interaction.options.getRole("required_role")?.id ?? null,
@@ -82,7 +83,7 @@ export async function execute(interaction) {
     const name = interaction.options.getString("name", true).toLowerCase();
     const cmd = await getCustomCmd(guildId, name);
     if (!cmd) return interaction.reply({ content: "> Command not found.", flags: MessageFlags.Ephemeral });
-    await setCustomCmd(guildId, name, { ...cmd, response: interaction.options.getString("response", true) });
+    await setCustomCmd(guildId, name, { ...cmd, response: sanitizeString(interaction.options.getString("response", true)).slice(0, 2000) });
     return interaction.reply({ content: `> Command \`!${name}\` updated.`, flags: MessageFlags.Ephemeral });
   }
 

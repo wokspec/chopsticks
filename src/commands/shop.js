@@ -14,6 +14,7 @@ function formatItemLine(it) {
 }
 
 export const meta = {
+  deployGlobal: true,
   category: "economy",
   guildOnly: true,
 };

@@ -9,6 +9,7 @@ import {
 export const metadata: Metadata = {
   title: 'Chopsticks — Discord Bot by WokSpec',
   description: '60+ slash commands covering music, moderation, economy, games, AI, and the Agent Pool system. Open source, community-built, free forever.',
+  alternates: { canonical: 'https://chopsticks.wokspec.org' },
 };
 
 const BOT_INVITE = 'https://discord.com/api/oauth2/authorize?client_id=1466382874587431036&permissions=1099514858544&scope=bot%20applications.commands';

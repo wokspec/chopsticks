@@ -70,7 +70,17 @@ export default function CommandsClient() {
   useEffect(() => {
     fetch('/data/chopsticks-commands.json')
       .then(r => r.json())
-      .then((d: CommandData[]) => setCommands(d))
+      .then((d: unknown) => {
+        // Validate: must be an array of objects with required string fields
+        if (!Array.isArray(d)) return;
+        const valid = (d as CommandData[]).filter(
+          c => c && typeof c === 'object' &&
+               typeof c.name === 'string' && c.name.length > 0 &&
+               typeof c.category === 'string' &&
+               typeof c.summary === 'string'
+        );
+        setCommands(valid);
+      })
       .catch(() => {});
   }, []);
 

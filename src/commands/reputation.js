@@ -4,6 +4,7 @@ import { cacheIncr } from "../utils/cache.js";
 import { Colors } from "../utils/discordOutput.js";
 
 export const meta = {
+  deployGlobal: true,
   guildOnly: true,
   userPerms: [],
   category: "economy"

@@ -4,6 +4,7 @@ import React from 'react';
 export const metadata: Metadata = {
   title: 'Self-Host',
   description: 'Run your own Chopsticks instance. Full Docker stack — PostgreSQL, Redis, and Lavalink included. Fork, rebrand, and own it completely.',
+  alternates: { canonical: 'https://chopsticks.wokspec.org/self-host' },
 };
 
 const CODE_BLOCK_STYLE: React.CSSProperties = {

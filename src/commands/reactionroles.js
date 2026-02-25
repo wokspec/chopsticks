@@ -16,6 +16,7 @@ import { Colors } from "../utils/discordOutput.js";
 import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageRoles],
   category: "admin"

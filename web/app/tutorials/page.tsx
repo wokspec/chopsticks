@@ -5,6 +5,7 @@ import React from 'react';
 export const metadata: Metadata = {
   title: 'Tutorials — Chopsticks',
   description: 'Step-by-step guides for setting up moderation, economy, the Agent Pool, server customization, and self-hosting Chopsticks.',
+  alternates: { canonical: 'https://chopsticks.wokspec.org/tutorials' },
 };
 
 const GITHUB = 'https://github.com/WokSpec/Chopsticks';

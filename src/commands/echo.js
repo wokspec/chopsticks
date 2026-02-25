@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from "discord.js";
 import { replyEmbed } from "../utils/discordOutput.js";
+import { sanitizeString } from "../utils/validation.js";
 
 export const meta = {
   category: "util",
@@ -13,6 +14,6 @@ export const data = new SlashCommandBuilder()
   .addStringOption(o => o.setName("text").setDescription("Text").setRequired(true));
 
 export async function execute(interaction) {
-  const text = interaction.options.getString("text", true);
+  const text = sanitizeString(interaction.options.getString("text", true)).slice(0, 2000);
   await replyEmbed(interaction, "Echo", text, true);
 }

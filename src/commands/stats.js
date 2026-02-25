@@ -15,6 +15,7 @@ import { ACHIEVEMENT_DEFS, ensureAchievementsSeed } from '../game/achievements.j
 import { withTimeout } from '../utils/interactionTimeout.js';
 
 export const meta = {
+  deployGlobal: true,
   name: 'stats',
   description: 'Per-guild activity stats, leaderboards, and achievements',
   category: 'economy',

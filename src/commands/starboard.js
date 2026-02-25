@@ -11,6 +11,7 @@ import { normalizeStarboardConfig, starboardEmojiKey } from "../utils/starboard.
 import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild],
   category: "tools"

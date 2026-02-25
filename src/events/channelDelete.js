@@ -2,6 +2,7 @@
 import { EmbedBuilder, AuditLogEvent } from "discord.js";
 import { dispatchAuditLog } from "../tools/auditLog/dispatcher.js";
 import { getAntinukeConfig, recordAction, punishExecutor } from "../tools/antinuke/engine.js";
+import { logger } from "../utils/logger.js";
 
 export default {
   name: "channelDelete",
@@ -20,7 +21,7 @@ export default {
           if (exceeded) await punishExecutor(channel.guild, entry.executor.id, "channelDelete", config);
         }
       }
-    } catch {}
+    } catch (err) { logger.error({ err, guildId: channel.guild.id }, "channelDelete: antinuke error"); }
 
     const embed = new EmbedBuilder()
       .setTitle("Channel Deleted")

@@ -5,6 +5,7 @@ import { runGuildEventAutomations } from "../utils/automations.js";
 import { eventBus, Events } from "../utils/eventBus.js";
 import { buildWelcomeCardSvg } from "../game/render/cards.js";
 import { svgToPngBuffer } from "../game/render/imCards.js";
+import { logger } from "../utils/logger.js";
 
 export default {
   name: "guildMemberAdd",
@@ -21,7 +22,7 @@ export default {
         const role = member.guild.roles.cache.get(ar.roleId) ?? null;
         if (role) await member.roles.add(role).catch(() => {});
       }
-    } catch {}
+    } catch (err) { logger.error({ err, guildId }, "guildMemberAdd: autorole error"); }
 
     // Welcome
     try {
@@ -61,12 +62,12 @@ export default {
           await ch.send({ content: text, files: cardAttachment ? [cardAttachment] : [] });
         }
       }
-    } catch {}
+    } catch (err) { logger.error({ err, guildId }, "guildMemberAdd: welcome error"); }
 
     // Level reward sync (best effort)
     try {
       await maybeSyncMemberLevelRoleRewards(member, { guildData: data, force: true });
-    } catch {}
+    } catch (err) { logger.warn({ err, guildId }, "guildMemberAdd: level reward sync error"); }
 
     // Event automations
     try {
@@ -76,7 +77,7 @@ export default {
         user: member.user,
         member
       });
-    } catch {}
+    } catch (err) { logger.error({ err, guildId }, "guildMemberAdd: automations error"); }
 
     // Fire event bus
     eventBus.fire(Events.MEMBER_JOINED, {
@@ -136,7 +137,7 @@ export default {
           if (vc) await vc.setName(`Members: ${member.guild.memberCount}`).catch(() => null);
         }
         await saveGuildData(member.guild.id, gd);
-      } catch {}
+      } catch (err) { logger.warn({ err, guildId: member.guild.id }, "guildMemberAdd: analytics error"); }
     })();
   }
 };

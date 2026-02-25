@@ -7,6 +7,7 @@ import { botLogger } from "../utils/modernLogger.js";
 import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
+  deployGlobal: true,
   category: "economy",
   guildOnly: true,
 };

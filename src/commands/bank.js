@@ -5,6 +5,7 @@ import { depositToBank, withdrawFromBank, getWallet, upgradeBankCapacity } from 
 import { botLogger } from "../utils/modernLogger.js";
 
 export const meta = {
+  deployGlobal: true,
   category: "economy",
   guildOnly: true,
 };

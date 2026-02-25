@@ -3,6 +3,7 @@ import { loadGuildData, saveGuildData } from "../utils/storage.js";
 import { Colors } from "../utils/discordOutput.js";
 
 export const meta = {
+  deployGlobal: true,
   guildOnly: true,
   userPerms: [],
   category: "tools"

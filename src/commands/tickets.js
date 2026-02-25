@@ -36,6 +36,7 @@ import {
 const TYPE_KEYS = new Set(TICKET_TYPES.map(t => t.key));
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   category: "tools"
 };
@@ -135,7 +136,8 @@ export const data = new SlashCommandBuilder()
           .setDescription("Closure reason")
           .setRequired(false)
       )
-  );
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 function createEmbed(title, description, color = Colors.INFO) {
   return new EmbedBuilder()

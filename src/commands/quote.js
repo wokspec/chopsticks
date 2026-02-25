@@ -6,6 +6,7 @@ import { withTimeout } from '../utils/interactionTimeout.js';
 import { httpRequest } from '../utils/httpFetch.js';
 
 export const meta = {
+  deployGlobal: true,
   name: 'quote',
   description: 'Random quote',
   category: 'fun',

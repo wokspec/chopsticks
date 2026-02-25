@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from "discord.
 import { loadGuildData, saveGuildData } from "../utils/storage.js";
 import { replyError } from "../utils/discordOutput.js";
 import { Colors } from "../utils/discordOutput.js";
+import { sanitizeString } from "../utils/validation.js";
 
 export const meta = {
   guildOnly: true,
@@ -42,7 +43,7 @@ export async function execute(interaction) {
   if (!guildData.notes) guildData.notes = {};
 
   if (sub === "add") {
-    const text = interaction.options.getString("text", true);
+    const text = sanitizeString(interaction.options.getString("text", true)).slice(0, 1000);
     const userNotes = guildData.notes[user.id] ?? [];
     const nextId = userNotes.length > 0 ? Math.max(...userNotes.map(n => n.id)) + 1 : 1;
     userNotes.push({

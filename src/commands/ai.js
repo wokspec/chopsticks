@@ -27,6 +27,7 @@ import { getRedisClient } from "../utils/redis.js";
 import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   category: "ai",
   description: "Chat with AI, generate images, and manage your AI provider settings.",

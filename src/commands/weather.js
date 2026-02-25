@@ -3,6 +3,7 @@ import { getWeather, wmoLabel } from "../utils/openmeteo.js";
 import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
+  deployGlobal: true,
   category: "util",
   guildOnly: false,
 };

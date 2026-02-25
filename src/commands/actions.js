@@ -15,6 +15,7 @@ import { getPool } from '../utils/storage_pg.js';
 import { withTimeout } from '../utils/interactionTimeout.js';
 
 export const meta = {
+  deployGlobal: false,
   name: 'actions',
   description: 'Agent economy actions — spend credits to have agents do things',
   category: 'economy',

@@ -3,6 +3,7 @@ import { replyModError, replyModSuccess } from "../moderation/output.js";
 import { dispatchModerationLog } from "../utils/modLogs.js";
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageChannels],
   category: "mod"

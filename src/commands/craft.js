@@ -89,6 +89,7 @@ function selectedFromMessage(interaction) {
 }
 
 export const meta = {
+  deployGlobal: true,
   category: "economy",
   guildOnly: true,
 };

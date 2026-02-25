@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from "discord.
 import { loadGuildData, saveGuildData } from "../utils/storage.js";
 
 export const meta = {
+  deployGlobal: true,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild],
   category: "admin"

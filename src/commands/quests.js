@@ -14,6 +14,7 @@ import { withTimeout } from "../utils/interactionTimeout.js";
 const QUEST_UI_PREFIX = "questui";
 
 export const meta = {
+  deployGlobal: true,
   category: "economy",
   guildOnly: true,
 };

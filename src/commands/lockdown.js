@@ -5,6 +5,7 @@ import { loadGuildData, saveGuildData } from "../utils/storage.js";
 import { sanitizeString } from "../utils/validation.js";
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageChannels],
   category: "mod"

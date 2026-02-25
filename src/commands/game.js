@@ -701,6 +701,12 @@ async function showActionResult(interaction, result) {
   await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }
 
+export const meta = {
+  category: "game",
+  guildOnly: true,
+  deployGlobal: true,
+};
+
 export const data = new SlashCommandBuilder()
   .setName("game")
   .setDescription("Game settings and utilities")

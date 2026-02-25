@@ -5,6 +5,7 @@ import { loadGuildData, saveGuildData } from "../utils/storage.js";
 import { withTimeout } from "../utils/interactionTimeout.js";
 
 export const meta = {
+  deployGlobal: false,
   category: "admin",
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild]

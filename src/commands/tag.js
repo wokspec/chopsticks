@@ -4,6 +4,7 @@ import { Colors } from "../utils/discordOutput.js";
 import { sanitizeString } from "../utils/validation.js";
 
 export const meta = {
+  deployGlobal: true,
   guildOnly: true,
   userPerms: [],
   category: "tools"

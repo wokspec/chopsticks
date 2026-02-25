@@ -5,7 +5,8 @@ import { getWallet, addCredits, removeCredits } from '../economy/wallet.js';
 import { checkRateLimit } from '../utils/ratelimit.js';
 import { botLogger } from "../utils/modernLogger.js";
 
-export const meta = { category: 'economy', guildOnly: true };
+export const meta = {
+  deployGlobal: true, category: 'economy', guildOnly: true };
 
 export const data = new SlashCommandBuilder()
   .setName('casino')

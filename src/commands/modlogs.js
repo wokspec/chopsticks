@@ -10,6 +10,7 @@ import { loadGuildData, saveGuildData } from "../utils/storage.js";
 import { MOD_LOG_ACTIONS, normalizeModLogConfig, dispatchModerationLog } from "../utils/modLogs.js";
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild],
   category: "admin"

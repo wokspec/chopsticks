@@ -1,5 +1,6 @@
 import { runGuildEventAutomations } from "../utils/automations.js";
 import { loadGuildData, saveGuildData } from "../utils/storage.js";
+import { logger } from "../utils/logger.js";
 
 export default {
   name: "guildMemberRemove",
@@ -16,7 +17,7 @@ export default {
         user: member.user,
         member
       });
-    } catch {}
+    } catch (err) { logger.error({ err, guildId: guild.id }, "guildMemberRemove: automations error"); }
 
     // Goodbye message
     try {
@@ -39,7 +40,7 @@ export default {
         const vc = guild.channels.cache.get(gd.memberCountChannelId);
         if (vc) await vc.setName(`Members: ${guild.memberCount}`).catch(() => null);
       }
-    } catch {}
+    } catch (err) { logger.error({ err, guildId: guild.id }, "guildMemberRemove: goodbye/membercount error"); }
 
     // Analytics: track leaves per day
     (async () => {
@@ -52,7 +53,7 @@ export default {
         const days = Object.keys(gd.analytics.memberLeaves).sort();
         if (days.length > 30) delete gd.analytics.memberLeaves[days[0]];
         await saveGuildData(guild.id, gd);
-      } catch {}
+      } catch (err) { logger.warn({ err, guildId: guild.id }, "guildMemberRemove: analytics error"); }
     })();
   }
 };

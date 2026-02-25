@@ -6,6 +6,7 @@ import { makeEmbed } from "../utils/discordOutput.js";
 import { sanitizeString } from "../utils/validation.js";
 
 export const meta = {
+  deployGlobal: false,
   category: "tools",
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageMessages]

@@ -229,6 +229,7 @@ async function updateWizard(interaction, { userId, channelId, note = "" }) {
 }
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageGuild],
   category: "admin"

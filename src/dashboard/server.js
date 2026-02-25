@@ -47,7 +47,7 @@ import { metricsHandler, healthHandler } from "../utils/metrics.js";
 import { getFunCatalog, randomFunFromRuntime, renderFunFromRuntime, resolveVariantId } from "../fun/runtime.js";
 import { embedToCardSvg, renderEmbedCardPng } from "../render/svgCard.js";
 import Joi from "joi";
-import { generateCorrelationId } from "../utils/logger.js";
+import { generateCorrelationId, logger } from "../utils/logger.js";
 import { installProcessSafety } from "../utils/processSafety.js";
 import { createRequire as _cjsRequire } from "node:module";
 import compression from "compression";
@@ -313,6 +313,39 @@ const assistantConfigSchema = Joi.object({
   voicePresets: Joi.array().items(Joi.string()).optional(),
   channelVoices: Joi.object().pattern(Joi.string(), Joi.string()).optional()
 });
+const voiceLobbyPatchSchema = Joi.object({
+  userLimit: Joi.number().integer().min(0).max(99).optional(),
+  bitrateKbps: Joi.number().integer().min(8).max(384).optional(),
+  maxChannels: Joi.number().integer().min(1).max(50).optional(),
+  template: Joi.string().min(1).max(100).optional(),
+  locked: Joi.boolean().optional(),
+  hidden: Joi.boolean().optional(),
+}).min(1);
+const voiceLobbyAddSchema = Joi.object({
+  channelId: Joi.string().pattern(/^[0-9]{5,20}$/).required(),
+  categoryId: Joi.string().pattern(/^[0-9]{5,20}$/).required(),
+  template: Joi.string().min(1).max(100).optional(),
+  userLimit: Joi.number().integer().min(0).max(99).optional(),
+  bitrateKbps: Joi.number().integer().min(8).max(384).optional(),
+  maxChannels: Joi.number().integer().min(1).max(50).optional(),
+});
+const xpConfigSchema = Joi.object({
+  enabled: Joi.boolean().optional(),
+  xp_multiplier: Joi.number().min(0).max(10).optional(),
+  xp_per_message: Joi.number().integer().min(0).max(1000).optional(),
+  xp_per_vc_minute: Joi.number().integer().min(0).max(1000).optional(),
+  xp_per_work: Joi.number().integer().min(0).max(10000).optional(),
+  xp_per_gather: Joi.number().integer().min(0).max(10000).optional(),
+  xp_per_fight_win: Joi.number().integer().min(0).max(10000).optional(),
+  xp_per_trivia_win: Joi.number().integer().min(0).max(10000).optional(),
+  xp_per_daily: Joi.number().integer().min(0).max(10000).optional(),
+  xp_per_command: Joi.number().integer().min(0).max(1000).optional(),
+  xp_per_agent_action: Joi.number().integer().min(0).max(1000).optional(),
+  message_xp_cooldown_s: Joi.number().integer().min(0).max(3600).optional(),
+  levelup_channel_id: Joi.string().pattern(/^[0-9]{5,20}$/).allow(null, "").optional(),
+  levelup_message: Joi.string().max(500).allow(null, "").optional(),
+  sync_global_xp: Joi.boolean().optional(),
+}).min(1);
 
 function requireAuth(req, res, next) {
   if (!req.session?.accessToken) {
@@ -2481,7 +2514,7 @@ app.post("/api/agents/:id/disconnect", requireAuth, rateLimitDashboard, requireC
   }
   try {
     agent.ws.terminate();
-  } catch {}
+  } catch (err) { logger.warn({ err, agentId: id }, "agent disconnect: ws.terminate error"); }
   res.json({ ok: true, action: "disconnected", agentId: id });
 });
 
@@ -2495,7 +2528,7 @@ app.post("/api/agents/:id/restart", requireAuth, rateLimitDashboard, requireCsrf
   }
   try {
     agent.ws.terminate();
-  } catch {}
+  } catch (err) { logger.warn({ err, agentId: id }, "agent restart: ws.terminate error"); }
   res.json({ ok: true, action: "restarted", agentId: id });
 });
 
@@ -2518,10 +2551,10 @@ app.post("/api/agents/:id/release", requireAuth, rateLimitDashboard, requireCsrf
         ownerUserId: agent.ownerUserId,
         actorUserId: agent.ownerUserId
       });
-    } catch {}
+    } catch (err) { logger.warn({ err, agentId: id }, "agent release: stop request error"); }
     try {
       mgr.releaseSession(guildId, voiceChannelId);
-    } catch {}
+    } catch (err) { logger.warn({ err, agentId: id }, "agent release: releaseSession error"); }
   }
   res.json({ ok: true, action: "released", agentId: id });
 });
@@ -2551,12 +2584,17 @@ app.post("/api/agents/:id/handoff", requireAuth, rateLimitDashboard, requireCsrf
 
 app.post("/api/guild/:id/music/default", requireAuth, rateLimitDashboard, requireCsrf, async (req, res) => {
   const guildId = String(req.params.id || "");
-  const mode = String(req.body?.mode || "open");
-  const defaultVolume = req.body?.defaultVolume;
   if (!guildId || !isSnowflake(guildId)) {
     res.status(400).json({ ok: false, error: "bad-guild" });
     return;
   }
+
+  try { validateInput(musicConfigSchema, req.body ?? {}); } catch (e) {
+    res.status(400).json({ ok: false, error: "validation", details: e.message });
+    return;
+  }
+
+  const { mode, defaultVolume } = req.body;
 
   const guildAccess = await checkGuildAccess(req, res, guildId);
   if (!guildAccess) return;
@@ -2931,9 +2969,14 @@ app.post("/api/guild/:id/assistant/install-voice", requireAuth, rateLimitDashboa
 app.post("/api/guild/:id/voice/lobby/:channelId", requireAuth, rateLimitDashboard, requireCsrf, async (req, res) => {
   const guildId = String(req.params.id || "");
   const channelId = String(req.params.channelId || "");
-  const patch = req.body ?? {};
   if (!guildId || !isSnowflake(guildId) || !isSnowflake(channelId)) {
     res.status(400).json({ ok: false, error: "bad-request" });
+    return;
+  }
+
+  let patch;
+  try { validateInput(voiceLobbyPatchSchema, req.body ?? {}); patch = req.body; } catch (e) {
+    res.status(400).json({ ok: false, error: "validation", details: e.message });
     return;
   }
 
@@ -2957,11 +3000,17 @@ app.post("/api/guild/:id/voice/lobby/:channelId", requireAuth, rateLimitDashboar
 
 app.post("/api/guild/:id/voice/lobby/add", requireAuth, rateLimitDashboard, requireCsrf, async (req, res) => {
   const guildId = String(req.params.id || "");
-  const { channelId, categoryId, template, userLimit, bitrateKbps, maxChannels } = req.body ?? {};
-  if (!guildId || !isSnowflake(guildId) || !isSnowflake(String(channelId || "")) || !isSnowflake(String(categoryId || ""))) {
-    res.status(400).json({ ok: false, error: "bad-request" });
+  if (!guildId || !isSnowflake(guildId)) {
+    res.status(400).json({ ok: false, error: "bad-guild" });
     return;
   }
+
+  let body;
+  try { validateInput(voiceLobbyAddSchema, req.body ?? {}); body = req.body; } catch (e) {
+    res.status(400).json({ ok: false, error: "validation", details: e.message });
+    return;
+  }
+  const { channelId, categoryId, template, userLimit, bitrateKbps, maxChannels } = body;
 
   const guildAccess = await checkGuildAccess(req, res, guildId);
   if (!guildAccess) return;
@@ -3086,6 +3135,10 @@ app.get("/api/guild/:id/xp/config", requireAuth, rateLimitDashboard, requireGuil
 
 app.post("/api/guild/:id/xp/config", requireAuth, rateLimitDashboard, requireCsrf, requireGuildAdminOrOwner(), async (req, res) => {
   const guildId = String(req.params.id || "");
+  try { validateInput(xpConfigSchema, req.body ?? {}); } catch (e) {
+    res.status(400).json({ ok: false, error: "validation", details: e.message });
+    return;
+  }
   const allowed = ['enabled','xp_multiplier','xp_per_message','xp_per_vc_minute','xp_per_work','xp_per_gather',
     'xp_per_fight_win','xp_per_trivia_win','xp_per_daily','xp_per_command','xp_per_agent_action',
     'message_xp_cooldown_s','levelup_channel_id','levelup_message','sync_global_xp'];

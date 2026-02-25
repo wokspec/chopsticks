@@ -9,6 +9,7 @@ import {
 export const metadata: Metadata = {
   title: 'Features — Chopsticks',
   description: 'Everything Chopsticks can do: 49 concurrent music players, near-human AI agents, gamification platform, raid protection, fully programmable automation, and open source AI integration.',
+  alternates: { canonical: 'https://chopsticks.wokspec.org/features' },
 };
 
 const BOT_INVITE = 'https://discord.com/api/oauth2/authorize?client_id=1466382874587431036&permissions=1099514858544&scope=bot%20applications.commands';

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { guildLRU, invalidateGuild } from "./localCache.js";
+import { logger } from "./logger.js";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const SCHEMA_VERSION = 1;
@@ -440,7 +441,8 @@ export async function loadGuildData(guildId) {
         await cache.cacheSet(`guild:${guildId}`, normalized, GUILD_CACHE_TTL_SEC);
       }
       return normalized;
-    } catch {
+    } catch (err) {
+      logger.warn({ err, guildId }, "storage: loadGuildData PG/cache fallback to baseData");
       return baseData();
     }
   }
@@ -476,7 +478,8 @@ export async function ensureGuildData(guildId) {
         await cache.cacheSet(`guild:${guildId}`, normalized, GUILD_CACHE_TTL_SEC);
       }
       return normalized;
-    } catch {
+    } catch (err) {
+      logger.warn({ err, guildId }, "storage: ensureGuildData PG/cache fallback to baseData");
       return baseData();
     }
   }
@@ -486,7 +489,9 @@ export async function ensureGuildData(guildId) {
   if (needsWrite) {
     try {
       await saveGuildData(guildId, data);
-    } catch {}
+    } catch (err) {
+      logger.warn({ err, guildId }, "storage: ensureGuildData auto-save failed");
+    }
   }
   return data;
 }
@@ -504,7 +509,8 @@ export async function saveGuildData(guildId, data) {
         await cache.cacheSet(`guild:${guildId}`, normalized, GUILD_CACHE_TTL_SEC);
       }
       return saved;
-    } catch {
+    } catch (err) {
+      logger.error({ err, guildId }, "storage: saveGuildData PG save failed");
       throw new Error("save-failed");
     }
   }

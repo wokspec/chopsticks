@@ -231,6 +231,7 @@ function previewComponents(requesterId, token) {
 }
 
 export const meta = {
+  deployGlobal: false,
   guildOnly: true,
   userPerms: [PermissionFlagsBits.ManageMessages],
   category: "mod"

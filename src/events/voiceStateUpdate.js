@@ -56,7 +56,7 @@ export default {
         try {
           const { addStat } = await import('../game/activityStats.js');
           addStat(member.id, guild.id, 'vc_sessions', 1);
-        } catch {}
+        } catch (err) { logger.warn({ err }, "voiceStateUpdate: vc_sessions stat error"); }
       })();
     } else if (oldChannel && !newChannel) {
       // User left VC — compute session minutes
@@ -78,7 +78,7 @@ export default {
                 client: member.client,
                 baseXp: xpPerMin * minutes,
               }).catch(() => {});
-            } catch {}
+            } catch (err) { logger.warn({ err }, "voiceStateUpdate: vc xp/stat error"); }
           })();
         }
       }

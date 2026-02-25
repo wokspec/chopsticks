@@ -3,6 +3,7 @@ import { cacheGet, cacheSet, getRedis } from "../utils/cache.js";
 import { sanitizeString } from "../utils/validation.js";
 
 export const meta = {
+  deployGlobal: true,
   category: "utility",
   guildOnly: true,
 };

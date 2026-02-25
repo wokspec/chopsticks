@@ -2,6 +2,7 @@
 import { EmbedBuilder, AuditLogEvent } from "discord.js";
 import { dispatchAuditLog } from "../tools/auditLog/dispatcher.js";
 import { getAntinukeConfig, recordAction, punishExecutor } from "../tools/antinuke/engine.js";
+import { logger } from "../utils/logger.js";
 
 export default {
   name: "roleDelete",
@@ -18,7 +19,7 @@ export default {
           if (exceeded) await punishExecutor(role.guild, entry.executor.id, "roleDelete", config);
         }
       }
-    } catch {}
+    } catch (err) { logger.error({ err, guildId: role.guild.id }, "roleDelete: antinuke error"); }
 
     const embed = new EmbedBuilder()
       .setTitle("Role Deleted")

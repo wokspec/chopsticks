@@ -105,6 +105,7 @@ const KNOWN_COMMAND_GROUPS = {
 };
 
 export const meta = {
+  deployGlobal: true,
   category: "util",
   guildOnly: true,
 };

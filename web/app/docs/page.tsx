@@ -4,6 +4,7 @@ import React from 'react';
 export const metadata: Metadata = {
   title: 'Docs',
   description: 'Complete documentation for Chopsticks — quickstart, self-hosting, Docker setup, branding/reskin guide, Agent Pool, and more.',
+  alternates: { canonical: 'https://chopsticks.wokspec.org/docs' },
 };
 
 const CODE_BLOCK_STYLE: React.CSSProperties = {

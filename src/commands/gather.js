@@ -12,7 +12,7 @@ import { recordQuestEvent } from "../game/quests.js";
 import { botLogger } from "../utils/modernLogger.js";
 import { withTimeout } from "../utils/interactionTimeout.js";
 
-const GATHER_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+export const GATHER_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 
 export const meta = {
   category: "economy",

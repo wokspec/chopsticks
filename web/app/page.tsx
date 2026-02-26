@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'Chopsticks — Discord Bot by WokSpec',
-  description: '60+ slash commands covering music, moderation, economy, games, AI, and the Agent Pool system. Open source, community-built, free forever.',
+  description: '100+ slash commands covering music, moderation, economy, games, AI, and the Agent Pool system. Open source, community-built, free forever.',
   alternates: { canonical: 'https://chopsticks.wokspec.org' },
 };
 
@@ -16,13 +16,13 @@ const BOT_INVITE = 'https://discord.com/api/oauth2/authorize?client_id=146638287
 const GITHUB = 'https://github.com/WokSpec/Chopsticks';
 
 const CATEGORIES = [
-  { name: 'Moderation', count: 15, Icon: ShieldIcon, cls: 'cat-mod', desc: 'Ban, kick, mute, warn, purge. Hierarchy-safe. Every action logged.' },
-  { name: 'Fun & Games', count: 13, Icon: GamepadIcon, cls: 'cat-games', desc: 'Trivia, battle, ship, Would You Rather, riddles. Built for active communities.' },
-  { name: 'Automation', count: 13, Icon: ZapIcon, cls: 'cat-auto', desc: 'Reaction roles, welcome messages, auto-roles, scheduled messages. Set once.' },
-  { name: 'Economy', count: 8, Icon: CoinIcon, cls: 'cat-eco', desc: 'Credits, shop, daily claims, leaderboard, heist, auctions. Keeps members engaged.' },
-  { name: 'Utility', count: 8, Icon: WrenchIcon, cls: 'cat-util', desc: 'Weather, GitHub repos, Wikipedia, polls, reminders, server info.' },
-  { name: 'Music', count: 1, Icon: MusicIcon, cls: 'cat-music', desc: '49 concurrent sessions. YouTube, Spotify, SoundCloud. Agents can also read books, stories, or research papers aloud.' },
-  { name: 'AI', count: 2, Icon: SparkleIcon, cls: 'cat-ai', desc: 'Open source AI models. Chat, voice, near-human personas. Deploy agents that think and respond like real users.' },
+  { name: 'Moderation', count: 14, Icon: ShieldIcon, cls: 'cat-mod', desc: 'Ban, kick, mute, warn, purge, lockdown, antinuke, antispam. Hierarchy-safe. Every action logged.' },
+  { name: 'Fun & Games', count: 27, Icon: GamepadIcon, cls: 'cat-games', desc: 'Trivia, battle, ship, Would You Rather, riddles, roast, gather, heist, quests. Built for active communities.' },
+  { name: 'Automation', count: 20, Icon: ZapIcon, cls: 'cat-auto', desc: 'Reaction roles, welcome messages, auto-roles, scheduled messages, custom commands, scripts. Set once.' },
+  { name: 'Economy', count: 7, Icon: CoinIcon, cls: 'cat-eco', desc: 'Credits, shop, daily claims, leaderboard, heist, auctions, profile cards. Keeps members engaged.' },
+  { name: 'Utility', count: 25, Icon: WrenchIcon, cls: 'cat-util', desc: 'Weather, polls, reminders, tags, server stats, XP info, bot analytics, audit tools.' },
+  { name: 'Music', count: 2, Icon: MusicIcon, cls: 'cat-music', desc: '49 concurrent sessions. YouTube, Spotify, SoundCloud. Agents can also read books, stories, or research papers aloud.' },
+  { name: 'AI', count: 6, Icon: SparkleIcon, cls: 'cat-ai', desc: 'Open source AI models. Chat, voice, near-human personas. Deploy agents, manage BYOK keys, configure AI behavior.' },
 ];
 
 export default function HomePage() {
@@ -56,7 +56,7 @@ export default function HomePage() {
               </h1>
 
               <p style={{ fontSize: '1.05rem', color: 'var(--text-muted)', lineHeight: 1.75, maxWidth: '440px', marginBottom: '2.25rem' }}>
-                Music, moderation, economy, games, and AI agents — 60+ commands built and maintained by the community. Use the hosted instance or run your own.
+                Music, moderation, economy, games, and AI agents — 100+ commands built and maintained by the community. Use the hosted instance or run your own.
               </p>
 
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
@@ -72,7 +72,7 @@ export default function HomePage() {
 
               <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
                 {[
-                  { v: '60+', l: 'Commands' },
+                  { v: '100+', l: 'Commands' },
                   { v: '49', l: 'Concurrent players' },
                   { v: 'Agents', l: 'Near-human actors' },
                   { v: 'MIT', l: 'License' },
@@ -256,7 +256,7 @@ export default function HomePage() {
               <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', fontFamily: 'var(--font-heading)', marginBottom: '0.4rem' }}>Hosted · Zero setup</div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text)', fontFamily: 'var(--font-heading)', marginBottom: '0.75rem', lineHeight: 1.25 }}>Add it. It works.</h3>
               <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '1.5rem', flex: 1 }}>
-                The hosted instance is run by goot27 and always online. Invite Chopsticks, get 60+ commands instantly. No accounts, no config, no infrastructure.
+                The hosted instance is run by goot27 and always online. Invite Chopsticks, get 100+ commands instantly. No accounts, no config, no infrastructure.
               </p>
               <a href={BOT_INVITE} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '0.65rem 1.25rem', width: '100%', justifyContent: 'center' }}>
                 <DiscordIcon size={14} />
@@ -361,7 +361,7 @@ export default function HomePage() {
 
           <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
             <a href="/commands" className="btn btn-ghost" style={{ padding: '0.75rem 1.75rem' }}>
-              Browse all 60+ commands <ArrowRightIcon size={14} />
+              Browse all 100+ commands <ArrowRightIcon size={14} />
             </a>
           </div>
         </div>
@@ -429,7 +429,7 @@ export default function HomePage() {
             Use it. Fork it.<br /><span className="gradient-text">Ship it.</span>
           </h2>
           <p style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '2.25rem', maxWidth: '380px', margin: '0 auto 2.25rem' }}>
-            Use the instance hosted by goot27, or run your own. MIT licensed. 60+ commands, open to contributions.
+            Use the instance hosted by goot27, or run your own. MIT licensed. 100+ commands, open to contributions.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href={BOT_INVITE} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '0.95rem 2.25rem', fontSize: '0.95rem' }}>

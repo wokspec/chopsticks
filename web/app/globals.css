@@ -1699,3 +1699,546 @@ footer {
   .features-grid   { grid-template-columns: 1fr; }
   .container       { padding: 0 0.875rem; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   TUTORIALS PAGE — complete rebuild
+   ═══════════════════════════════════════════════════════ */
+
+/* Mobile tab strip — hidden on desktop */
+.tut-mobile-tabs {
+  display: none;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+.tut-mobile-tabs::-webkit-scrollbar { display: none; }
+.tut-mobile-tabs-inner {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.75rem 0 0.75rem;
+  min-width: max-content;
+}
+.tut-mobile-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: var(--font-heading);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.tut-mobile-tab.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 2-column layout */
+.tut-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* Left sidebar */
+.tut-sidebar {
+  position: sticky;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding-bottom: 1rem;
+}
+.tut-sidebar::-webkit-scrollbar { display: none; }
+
+.tut-sidebar-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-family: var(--font-heading);
+  padding: 0 0.25rem 0.5rem;
+  margin-bottom: 0.125rem;
+}
+
+.tut-navcard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+.tut-navcard:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+.tut-navcard.active {
+  border-color: rgba(56,189,248,0.35);
+  background: rgba(56,189,248,0.05);
+  box-shadow: 0 0 0 1px rgba(56,189,248,0.12) inset;
+}
+.tut-navcard-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.tut-navcard-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.tut-navcard-icon-wrap.active {
+  background: rgba(56,189,248,0.1);
+  border-color: rgba(56,189,248,0.25);
+  color: var(--accent);
+}
+.tut-navcard-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.tut-navcard-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tut-navcard.active .tut-navcard-title { color: var(--text); }
+.tut-navcard-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.tut-navcard-time {
+  font-size: 0.68rem;
+  color: var(--text-faint);
+  font-family: var(--font-heading);
+}
+
+.tut-sidebar-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56,189,248,0.2);
+  background: rgba(56,189,248,0.04);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.tut-sidebar-cta:hover {
+  background: rgba(56,189,248,0.1);
+  border-color: rgba(56,189,248,0.4);
+}
+
+/* Main content area */
+.tut-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+/* Discord window mockup */
+.tut-window {
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+  border: 1px solid #2a2c30;
+  border-bottom: none;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+}
+.tut-window-chrome {
+  background: #1a1b1e;
+  padding: 0.55rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #232428;
+}
+.tut-chrome-dots {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.chrome-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: block;
+  flex-shrink: 0;
+}
+.dot-red    { background: #ff5f57; }
+.dot-yellow { background: #febc2e; }
+.dot-green  { background: #28c840; }
+.tut-chrome-url {
+  flex: 1;
+  background: #2b2d31;
+  border-radius: 5px;
+  padding: 0.22rem 0.75rem;
+  font-size: 0.68rem;
+  color: #6d7580;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid #35373e;
+}
+
+/* SVG preview with fade transition */
+.tut-preview-wrap {
+  display: block;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  background: #313338;
+  line-height: 0;
+}
+.tut-preview-wrap.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.tut-preview-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Meta strip */
+.tut-meta-strip {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.75rem;
+}
+.tut-meta-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  flex: 1;
+  min-width: 0;
+}
+.tut-meta-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.tut-meta-icon--beginner     { background: rgba(74,222,128,0.08);  color: #4ade80; border-color: rgba(74,222,128,0.2); }
+.tut-meta-icon--intermediate { background: rgba(251,191,36,0.08);  color: #fbbf24; border-color: rgba(251,191,36,0.2); }
+.tut-meta-icon--advanced     { background: rgba(248,113,113,0.08); color: #f87171; border-color: rgba(248,113,113,0.2); }
+.tut-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+.tut-meta-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  font-family: var(--font-heading);
+}
+.tut-meta-time {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  font-family: var(--font-heading);
+}
+.tut-meta-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+.tut-prev-next {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.tut-pn-btn {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: var(--font-heading);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tut-pn-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tut-pn-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.tut-pn-count {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  font-family: var(--font-heading);
+  min-width: 36px;
+  text-align: center;
+}
+
+/* Steps section */
+.tut-steps-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+.tut-steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+.tut-steps-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-family: var(--font-heading);
+}
+.tut-steps-progress {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.tut-pip {
+  width: 24px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 0;
+}
+.tut-pip.active { background: var(--accent); }
+.tut-pip.done   { background: #4ade80; }
+.tut-steps-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual step */
+.tut-step {
+  display: flex;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.tut-step:last-child { border-bottom: none; }
+
+/* Track (number + connecting line) */
+.tut-step-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0 0 1.25rem;
+  flex-shrink: 0;
+  width: 52px;
+}
+.tut-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--text-faint);
+  flex-shrink: 0;
+  transition: all 0.2s;
+  z-index: 1;
+}
+.tut-step-num.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(56,189,248,0.15);
+}
+.tut-step-num.done {
+  background: rgba(74,222,128,0.15);
+  border-color: #4ade80;
+  color: #4ade80;
+  font-size: 0.72rem;
+}
+.tut-step-line {
+  width: 1.5px;
+  flex: 1;
+  min-height: 20px;
+  background: var(--border);
+  margin-top: 4px;
+  transition: background 0.2s;
+}
+.tut-step-line.done { background: rgba(74,222,128,0.3); }
+
+/* Step content + accordion */
+.tut-step-content {
+  flex: 1;
+  min-width: 0;
+}
+.tut-step-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.9rem 1.25rem 0.9rem 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 0.75rem;
+  transition: background 0.12s;
+}
+.tut-step-hdr:hover { background: rgba(255,255,255,0.02); }
+.tut-step.open .tut-step-hdr { background: rgba(56,189,248,0.03); }
+.tut-step-heading {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-heading);
+  line-height: 1.4;
+}
+.tut-step.done .tut-step-heading { color: var(--text-muted); }
+.tut-step-chevron {
+  font-size: 1.1rem;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  display: block;
+  line-height: 1;
+}
+.tut-step-chevron.open { transform: rotate(90deg); }
+.tut-step-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.28s ease;
+}
+.tut-step-body.open {
+  max-height: 600px;
+}
+.tut-step-body-inner {
+  padding: 0 1.25rem 1.125rem 0.75rem;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+
+/* Bottom CTA */
+.tut-cta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+}
+.tut-cta-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-heading);
+  margin: 0 0 0.2rem;
+}
+.tut-cta-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+.tut-cta-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Responsive — tutorials ─────────────────────────── */
+@media (max-width: 900px) {
+  .tut-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .tut-sidebar { display: none; }
+  .tut-mobile-tabs { display: block; }
+  .tut-meta-strip { flex-direction: column; align-items: flex-start; }
+  .tut-prev-next { align-self: flex-end; }
+}
+
+@media (max-width: 600px) {
+  .tut-step-track { width: 40px; padding-left: 0.75rem; }
+  .tut-step-hdr   { padding: 0.75rem 0.875rem 0.75rem 0.5rem; }
+  .tut-step-body-inner { padding: 0 0.875rem 0.875rem 0.5rem; }
+  .tut-chrome-url { display: none; }
+  .tut-cta-bar    { flex-direction: column; align-items: flex-start; }
+}

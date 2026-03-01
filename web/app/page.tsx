@@ -458,8 +458,7 @@ export default function HomePage() {
               <span style={{ fontWeight: 700, color: '#e8742a', letterSpacing: '0.02em' }}>WokSpec</span>
             </a>
             <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(2.75rem, 6vw, 4.5rem)', lineHeight: 1.0, letterSpacing: '-0.05em', color: 'var(--text)', marginBottom: '1.5rem' }}>
-              One bot.<br />
-              <span className="gradient-text">Infinite possibilities.</span>
+              <span className="gradient-text">Chopsticks</span>
             </h1>
             <p style={{ fontSize: '1.05rem', color: 'var(--text-muted)', lineHeight: 1.8, maxWidth: 480, marginBottom: '2rem' }}>
               Chopsticks is a fully-loaded Discord bot with 148 prefix commands and 101 slash commands across 11 categories — music, moderation, economy, AI, leveling, and automation. It's open source, actively developed, and we'd love your help making it something special.

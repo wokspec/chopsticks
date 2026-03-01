@@ -59,6 +59,7 @@ export function Header() {
 
   return (
     <header>
+      <a href="#main-content" className="skip-to-content">Skip to content</a>
       <div className="header-inner">
         <Link href="/" className="header-logo">
           <div className="header-logo-mark"><img src="/images/chopsticks.png" alt="Chopsticks" width={22} height={22} style={{ objectFit: 'contain', display: 'block' }} /></div>
@@ -86,6 +87,8 @@ export function Header() {
           <button
             className="mobile-nav-toggle"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-menu"
             onClick={() => setMobileOpen(v => !v)}
           >
             {mobileOpen ? (
@@ -98,7 +101,7 @@ export function Header() {
       </div>
 
       {/* Mobile nav */}
-      <div className={`mobile-nav${mobileOpen ? '' : ' hidden'}`}>
+      <div id="mobile-nav-menu" className={`mobile-nav${mobileOpen ? '' : ' hidden'}`} role="navigation" aria-label="Mobile navigation">
         {[
           { href: '/features',  label: 'Features',  Icon: SparkleIcon },
           { href: '/commands',  label: 'Commands',  Icon: ZapIcon },

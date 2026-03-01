@@ -566,7 +566,7 @@ export default function HomePage() {
       <section style={{ padding: '5rem 0', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
         <div className="orb orb-violet" style={{ width: 600, height: 600, top: '50%', right: -200, transform: 'translateY(-50%)', opacity: 0.18, pointerEvents: 'none' }} />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <div className="oss-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem', alignItems: 'start' }}>
+          <div className="oss-grid" style={{ alignItems: 'start' }}>
             <div>
               <div className="badge" style={{ marginBottom: '1.25rem' }}>Open Source</div>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', color: 'var(--text)', letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: '1.25rem' }}>

@@ -302,7 +302,12 @@ export default function CommandsClient() {
       {/* Results */}
       <div className="container" style={{ padding: '2.5rem 1.5rem' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-faint)' }}>Loading commands…</div>
+          <div style={{ padding: '2rem 0' }}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} style={{ height: 68, borderRadius: 'var(--radius-lg)', background: 'var(--surface)', border: '1px solid var(--border)', marginBottom: '0.625rem', opacity: 1 - i * 0.12,
+                animation: 'skeletonPulse 1.6s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+            ))}
+          </div>
         ) : tab === 'prefix' ? (
           <>
             {/* prefix note + permission legend */}

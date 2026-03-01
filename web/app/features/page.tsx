@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import React from 'react';
 import {
   MusicIcon, RadioIcon, ShieldIcon, ZapIcon, SparkleIcon, CoinIcon,
-  UsersIcon, ServerIcon, PaletteIcon, ArrowRightIcon, GitHubIcon,
-  DiscordIcon, TerminalIcon, BookOpenIcon, WrenchIcon, GamepadIcon, CheckIcon,
+  ServerIcon, ArrowRightIcon, GitHubIcon, DiscordIcon, WrenchIcon,
+  GamepadIcon, CheckIcon, BookOpenIcon,
 } from '../icons';
 
 export const metadata: Metadata = {
@@ -15,219 +15,319 @@ export const metadata: Metadata = {
 const BOT_INVITE = 'https://discord.com/api/oauth2/authorize?client_id=1466382874587431036&permissions=1099514858544&scope=bot%20applications.commands';
 const GITHUB = 'https://github.com/WokSpec/Chopsticks';
 
-// ── Agent role cards ────────────────────────────────────────────────────────
+function Check({ color = '#57f287' }: { color?: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: 16, height: 16, borderRadius: '50%', background: `${color}18`,
+      border: `1px solid ${color}40`, color, flexShrink: 0, marginTop: 2 }}>
+      <CheckIcon size={9} />
+    </span>
+  );
+}
 
-type RoleCategory = 'Voice' | 'Text' | 'Competitive' | 'Admin';
+function CmdPreview({ cmd, output, color }: { cmd: string; output: string; color: string }) {
+  return (
+    <div style={{ background: '#1e1f22', borderRadius: 8, overflow: 'hidden', fontSize: '0.72rem',
+      fontFamily: 'var(--font-mono)', marginTop: 'auto' }}>
+      <div style={{ padding: '0.4rem 0.65rem', borderBottom: '1px solid rgba(255,255,255,0.05)',
+        color: '#dcddde' }}>{cmd}</div>
+      <div style={{ borderLeft: `3px solid ${color}`, margin: '0.4rem 0.65rem 0.5rem',
+        paddingLeft: '0.5rem', color: '#b5bac1', lineHeight: 1.5 }}>{output}</div>
+    </div>
+  );
+}
 
-const AGENT_ROLES: { role: string; cat: RoleCategory; desc: string }[] = [
-  { role: 'DJ',                 cat: 'Voice',       desc: 'Plays music, takes requests from chat, announces tracks, interacts with listeners in real time.' },
-  { role: 'Narrator',           cat: 'Voice',       desc: 'Reads books, bedtime stories, D&D lore, research papers, or any text aloud in voice — on demand.' },
-  { role: 'Lobby Host',         cat: 'Voice',       desc: 'Permanently assigned to a waiting room — plays ambient music, greets arrivals, sets the vibe.' },
-  { role: 'Soundboard',         cat: 'Voice',       desc: 'Triggered by credits or commands to play sounds in VC: airhorns, crowd effects, custom clips.' },
-  { role: 'Event Announcer',    cat: 'Voice',       desc: 'Counts down to events, announces match starts, hypes moments in real time.' },
-  { role: 'Game Master',        cat: 'Voice',       desc: 'Narrates RPG encounters, runs combat, riddles, and escape room sessions through voice.' },
-  { role: 'Support Agent',      cat: 'Text',        desc: 'Bound to #support — handles tier-1 questions with a configured knowledge base. In development.' },
-  { role: 'Conversation Actor', cat: 'Text',        desc: 'Joins channels with a persona and butts into conversations contextually. Members may forget it\'s a bot.' },
-  { role: 'Onboarding Guide',   cat: 'Text',        desc: 'Assigned to #welcome — walks new members through the server, answers FAQs, points to channels.' },
-  { role: 'Hype Agent',         cat: 'Text',        desc: 'Deployed during gaming sessions to commentate wins/losses, celebrate streaks, and keep energy up.' },
-  { role: 'Trivia Opponent',    cat: 'Competitive', desc: 'Challenge a pool agent to a head-to-head trivia match in any category. It plays to win.' },
-  { role: 'Pool Competitor',    cat: 'Competitive', desc: 'Register your server\'s agents for cross-server competitions. Climb inter-server leaderboards.' },
-  { role: 'Debate Opponent',    cat: 'Competitive', desc: 'Configured to argue a position when challenged in a channel. Good for rhetoric practice.' },
-  { role: 'Moderation Sentinel',cat: 'Admin',       desc: 'Monitors channels with AI context, escalates or acts on policy violations.' },
-  { role: 'Raid Responder',     cat: 'Admin',       desc: 'Deployed automatically or manually during a raid — lockdown, mod alert, activity log.' },
-  { role: 'Interview Bot',      cat: 'Admin',       desc: 'Quizzes new members on server rules in #verification before granting access.' },
-];
+function Chip({ label, color }: { label: string; color: string }) {
+  return (
+    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem',
+      background: `${color}10`, border: `1px solid ${color}28`,
+      color, padding: '0.15rem 0.45rem', borderRadius: 4 }}>{label}</span>
+  );
+}
 
-const CAT_COLORS: Record<RoleCategory, string> = {
-  Voice:       '#38bdf8',
-  Text:        '#a78bfa',
-  Competitive: '#f472b6',
-  Admin:       '#fb923c',
-};
+// ── Bento feature cards ────────────────────────────────────────────────────
 
-// ── Feature pillars ─────────────────────────────────────────────────────────
-
-const PILLARS = [
+const FEATURES = [
   {
     Icon: MusicIcon,
     color: '#f472b6',
     label: 'Voice & Media',
-    headline: 'Your playlist. Your VC. Your agent.',
-    bullets: [
-      'Create a personal playlist channel — a drag-and-drop thread where you drop audio files and build your queue',
-      'Deploy an agent to pull from your playlist and play it live in any voice channel, on demand',
-      'Audiobook mode: drop PDFs, text files, books, or research papers into your playlist and an agent reads them aloud in a human-like voice',
-      'YouTube, Spotify, and SoundCloud still supported for URL-based queue building',
-      'Full queue control: skip, seek, shuffle, loop, volume, and live lyrics',
-      'These features are constantly in development — we urge contribution to help mainstream them',
+    headline: 'Your playlist. Your VC.',
+    sub: 'Personal drag-and-drop playlist channels. Agents play them live. Audiobook mode reads anything aloud.',
+    points: [
+      'Drop audio files into a playlist thread — any member can build a queue',
+      'Deploy an agent to play your playlist live in any voice channel',
+      'Audiobook mode: PDFs, books, research papers read aloud by an agent',
+      'YouTube, Spotify, SoundCloud URL support for quick queue building',
     ],
-    cmds: ['!play', '!queue', '!skip', '!playlist', '!audiobook', '/agents join'],
+    cmd: '!play lo-fi hip hop radio',
+    cmdOut: '🎵 Now Playing\nLo-Fi Hip Hop Radio  ·  ChilledCow  ·  3:45',
+    chips: ['!play', '!queue', '!skip', '!playlist', '!audiobook'],
+    span: 2,
   },
   {
     Icon: RadioIcon,
     color: '#a78bfa',
-    label: 'The Agent System',
+    label: 'Agent System',
     headline: 'Not a feature. A workforce.',
-    bullets: [
-      'Deploy configurable agent actors — give each one a persona, a job, and a home channel. Actively in development; we&apos;d love contributors to help push this further',
-      'Agents can be permanent (bound to a channel) or session-based (deployed on demand)',
-      'Roles available: DJ, Narrator, Support Bot, Conversation Actor, Trivia Opponent, Raid Responder, and more',
-      'Cross-server pool competitions — register your agents to compete in trivia arenas and leaderboards against other servers',
-      'Spend server credits to deploy agents: join VC and play a sound, interrupt a conversation, run a session',
-      'Configurable guardrails: per-server action allowlists, session cost, and duration caps',
+    sub: 'Configurable actors with names, personas, and assigned jobs. Permanent or session-based deployment.',
+    points: [
+      'Give each agent a persona, job, and home channel',
+      'Voice roles: DJ, Narrator, Lobby Host, Game Master',
+      'Text roles: Support, Onboarding Guide, Trivia Opponent',
+      'Cross-server pool competitions and leaderboards',
     ],
-    cmds: ['/agents join', '/agents style', '/agents list', '/setup', '/assistant bind'],
+    cmd: '/agents status',
+    cmdOut: '🤖 Agent Status\nPool: default  ·  In server: 3\n🟢 Idle 2  ·  ⚡ Busy 1',
+    chips: ['/agents join', '/agents style', '/agents list', '/setup'],
+    span: 1,
   },
   {
     Icon: CoinIcon,
     color: '#4ade80',
-    label: 'Gamification Platform',
-    headline: 'Members earn. Members spend. Members stay.',
-    bullets: [
-      'Full economy system: wallet, bank, daily claims, work, shop, and peer-to-peer transfers',
-      'XP, levels, and configurable role rewards — members level up through activity',
-      'Daily quests, gathering runs, crafting recipes, and a rarity-based collection system',
-      'Gamify tool usage itself — earn credits from completing automations, deploying agents, or running scripts',
-      'Leaderboards for credits, XP, collection completeness, and custom server stats',
-      'Giveaways, heists, and auctions — built-in community engagement events',
+    label: 'Economy & Gamification',
+    headline: 'Members earn. Members stay.',
+    sub: 'Full economy with XP, levels, shop, crafting, quests, and leaderboards.',
+    points: [
+      'Wallet, bank, daily/work earn, shop, peer-to-peer transfers',
+      'XP system with level-up roles and configurable gain rates',
+      'Gather runs, crafting, rarity-based item collections',
+      'Giveaways, heists, auctions — built-in engagement events',
     ],
-    cmds: ['!daily', '!work', '!quests', '!craft', '!shop', '!leaderboard'],
+    cmd: '!balance',
+    cmdOut: '💰 Balance — Mikel\nWallet: 1,250  ·  Bank: 8,900',
+    chips: ['!daily', '!work', '!shop', '!gather', '!leaderboard'],
+    span: 1,
   },
   {
     Icon: ShieldIcon,
     color: '#fb923c',
-    label: 'Server Protection',
+    label: 'Moderation & Protection',
     headline: 'Raids, nukes, spam — handled.',
-    bullets: [
-      'Raid detection: monitors join velocity and auto-executes configurable lockdown response',
-      'Nuke protection: detects mass channel deletions, mass bans, and permission escalations — triggers alerts before damage spreads',
-      'Auto-mod: spam filters, bad-word detection, mention limits, link rules — all channel-scopeable',
-      'Full moderation suite: ban, kick, warn, timeout, softban, purge, slowmode, lock — all logged and case-tracked',
-      'Hierarchy-safe: no moderator can act above their own rank. The bot mirrors Discord\'s native permission model',
-      'Warning history, case records, and clearable files — full audit trail per member',
+    sub: 'Raid detection, nuke protection, auto-mod, and a full case-tracked moderation suite.',
+    points: [
+      'Raid detection: monitors join velocity, auto-executes lockdown',
+      'Nuke protection: mass deletions/bans trigger alerts instantly',
+      'Spam, bad-word, mention, and link filters — channel-scopeable',
+      'Full case records, warning history, clearable audit trails',
     ],
-    cmds: ['!ban', '!warn', '!purge', '!timeout', '!lock', '!slowmode', '/automod', '/setup'],
+    cmd: '!warn @spammer Repeated spam',
+    cmdOut: 'Warned 382910471.\nTotal warnings: 3  ·  Case #049 created',
+    chips: ['!ban', '!warn', '!purge', '!timeout', '/automod', '/cases'],
+    span: 1,
   },
   {
-    Icon: ZapIcon,
+    Icon: WrenchIcon,
     color: '#facc15',
     label: 'Automation & Tooling',
     headline: 'Configure once. Runs forever.',
-    bullets: [
-      'Event-triggered automations: join, leave, level-up, boost, or any server event → custom action chain',
-      'Fully programmable scripts: chain commands, use variables, trigger conditionally, call from other automations',
-      'Custom commands: build your own slash commands with static or dynamic responses — no code',
-      'Ticket system: member-initiated private channels with panel, roles, close, and archive',
-      'Reaction roles, level-gated roles, and macro aliases — server configuration as infrastructure',
-      'Scheduled messages, reminders, and timed events — set it and forget it',
+    sub: 'Event-triggered automations, custom commands, ticket system, reaction roles, and scheduled messages.',
+    points: [
+      'Any event → custom action chain (join, leave, boost, level-up)',
+      'Custom slash commands with static or dynamic responses — no code',
+      'Ticket system: private channels with panel, close, and archive',
+      'Scheduled messages, reminders, and timed events',
     ],
-    cmds: ['!poll', '!giveaway', '!remind', '!autorole', '/tickets', '/automations', '/setup'],
+    cmd: '/tickets create',
+    cmdOut: '🎫 Ticket #031 opened\n#ticket-mikel created  ·  Staff notified',
+    chips: ['!poll', '!remind', '!autorole', '/tickets', '/automations'],
+    span: 1,
   },
   {
     Icon: SparkleIcon,
     color: '#22d3ee',
     label: 'AI & Intelligence',
     headline: 'Open source models. Real capability.',
-    bullets: [
-      'Powered by open source AI — not a thin API wrapper. Real models, running in the stack',
-      'Voice agents with configurable speech style, accent, and personality respond naturally in VC',
-      'Near-human persona configuration: name, avatar, tone, memory scope, response triggers',
-      'AI agents can participate in text channels contextually — they read history, not just the last message',
-      'Deploy AI as customer support: knowledge base, FAQ handling, escalation triggers',
-      'Document reading: drop in a research paper, book chapter, or briefing — the agent reads it aloud or summarizes',
+    sub: 'Voice agents with configurable speech, text agents that read chat history, document summarisation.',
+    points: [
+      'Open source AI — real models in the stack, not a thin API wrapper',
+      'Voice agents: configurable speech style, accent, and persona',
+      'Text agents read channel history, not just the last message',
+      'Document reading: research papers, briefings, book chapters',
     ],
-    cmds: ['!ask', '!summarize', '!translate', '!aimodel', '/ai chat', '/agents style'],
+    cmd: '!ask summarize the last 50 messages',
+    cmdOut: '🤖 Summary\nTopics: economy rebalance, music bot vote,\nupcoming raid event on Saturday.',
+    chips: ['!ask', '!summarize', '!translate', '/ai chat', '/agents style'],
+    span: 1,
   },
 ];
 
-// ── Use case highlights ──────────────────────────────────────────────────────
+// ── Agent role table ───────────────────────────────────────────────────────
+
+type RoleCat = 'Voice' | 'Text' | 'Competitive' | 'Admin';
+const CAT_COLORS: Record<RoleCat, string> = {
+  Voice: '#38bdf8', Text: '#a78bfa', Competitive: '#f472b6', Admin: '#fb923c',
+};
+const CAT_ICONS: Record<RoleCat, React.ReactNode> = {
+  Voice: '🎙️', Text: '💬', Competitive: '🏆', Admin: '🛡️',
+};
+
+const AGENT_ROLES: { role: string; cat: RoleCat; desc: string }[] = [
+  { role: 'DJ',                  cat: 'Voice',       desc: 'Plays music, takes requests, announces tracks, and interacts with listeners in real time.' },
+  { role: 'Narrator',            cat: 'Voice',       desc: 'Reads books, lore, research papers, or any text aloud in voice — on demand.' },
+  { role: 'Lobby Host',          cat: 'Voice',       desc: 'Permanently assigned to a waiting room — plays ambient music, greets arrivals.' },
+  { role: 'Game Master',         cat: 'Voice',       desc: 'Narrates RPG encounters, runs combat, riddles, and escape room sessions through voice.' },
+  { role: 'Support Agent',       cat: 'Text',        desc: 'Bound to #support — handles tier-1 questions with a configured knowledge base.' },
+  { role: 'Conversation Actor',  cat: 'Text',        desc: 'Joins channels with a persona and butts into conversations contextually.' },
+  { role: 'Onboarding Guide',    cat: 'Text',        desc: 'Assigned to #welcome — walks new members through the server, answers FAQs.' },
+  { role: 'Hype Agent',          cat: 'Text',        desc: 'Commentates wins/losses, celebrates streaks, and keeps energy up during sessions.' },
+  { role: 'Trivia Opponent',     cat: 'Competitive', desc: 'Challenge a pool agent to a head-to-head trivia match. It plays to win.' },
+  { role: 'Pool Competitor',     cat: 'Competitive', desc: "Register your server's agents for cross-server leaderboard competitions." },
+  { role: 'Debate Opponent',     cat: 'Competitive', desc: 'Argues a configured position when challenged. Good for rhetoric practice.' },
+  { role: 'Mod Sentinel',        cat: 'Admin',       desc: 'Monitors channels with AI context, escalates or acts on policy violations.' },
+  { role: 'Raid Responder',      cat: 'Admin',       desc: 'Deployed during a raid — lockdown, mod alert, activity log.' },
+  { role: 'Interview Bot',       cat: 'Admin',       desc: 'Quizzes new members on rules in #verification before granting access.' },
+];
+
+// ── Use cases ──────────────────────────────────────────────────────────────
 
 const USE_CASES = [
-  {
-    headline: 'The gaming server',
-    desc: 'Music in every lobby simultaneously. Economy and XP to keep members grinding. Trivia agents to challenge during downtime. Hype agents that go off when someone hits a milestone.',
-  },
-  {
-    headline: 'The community hub',
-    desc: 'Raid protection that responds before you can. Custom onboarding with an AI guide. Giveaways, polls, and quests to drive engagement. A credits economy that rewards participation.',
-  },
-  {
-    headline: 'The support server',
-    desc: 'Bind an AI agent to #support permanently. Configure a knowledge base. Tier-1 questions answered automatically. Escalation to mods when confidence is low. Ticket threads for everything else.',
-  },
-  {
-    headline: 'The study group',
-    desc: 'Agents that read research papers and book chapters aloud in voice. Trivia on your subject matter. Reminders, polls, and scheduled study sessions. Economy to reward consistent participation.',
-  },
-  {
-    headline: 'The roleplay server',
-    desc: 'Named AI personas that stay in character. Game Master agents for encounters. Lore narration in voice. Economy and crafting that maps to your world. Every interaction logged and tracked.',
-  },
-  {
-    headline: 'The business/brand',
-    desc: 'A self-hosted Chopsticks instance, rebranded under your name. Support agents, onboarding flows, lobby music. All running on your infrastructure, configured entirely via /setup.',
-  },
+  { icon: '🎮', label: 'Gaming Server',   color: '#a78bfa', desc: 'Music in every lobby. Economy and XP to keep members grinding. Trivia agents during downtime. Hype agents on milestone moments.' },
+  { icon: '🌐', label: 'Community Hub',   color: '#38bdf8', desc: 'Raid protection that responds before you can. AI-guided onboarding. Giveaways, polls, and quests. Credits economy that rewards participation.' },
+  { icon: '🎧', label: 'Support Server',  color: '#4ade80', desc: 'Bind an AI agent to #support. Configure a knowledge base. Tier-1 questions answered automatically. Ticket threads for everything else.' },
+  { icon: '📚', label: 'Study Group',     color: '#facc15', desc: 'Agents that read research papers aloud. Trivia on your subject. Reminders, polls, scheduled sessions. Economy rewards consistent participation.' },
+  { icon: '🐉', label: 'Roleplay Server', color: '#f472b6', desc: 'Named AI personas that stay in character. Game Master agents for encounters. Lore narration in voice. Crafting that maps to your world.' },
+  { icon: '🏢', label: 'Brand / Business',color: '#fb923c', desc: 'Self-hosted and rebranded under your name. Support agents, onboarding flows, lobby music. Runs on your infrastructure, configured via /setup.' },
 ];
 
 export default function FeaturesPage() {
   return (
     <>
-      {/* ── Header ────────────────────────────────────── */}
-      <section style={{ padding: '4rem 0 3.5rem', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
-        <div className="orb orb-blue"   style={{ width: 500, height: 500, top: -200, left: -150, opacity: 0.4, position: 'absolute' }} />
-        <div className="orb orb-violet" style={{ width: 350, height: 350, top: -100, right: -100, opacity: 0.3, position: 'absolute' }} />
+      {/* ── Hero ──────────────────────────────────────── */}
+      <section style={{ padding: '5rem 0 4rem', borderBottom: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
+        <div className="orb orb-blue"   style={{ width: 600, height: 600, top: -250, left: -200, opacity: 0.35, position: 'absolute' }} />
+        <div className="orb orb-violet" style={{ width: 400, height: 400, top: -150, right: -100, opacity: 0.28, position: 'absolute' }} />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ maxWidth: 680 }}>
-            <div className="badge" style={{ marginBottom: '1.25rem' }}>
-              <CheckIcon size={11} />
-              Everything included
-            </div>
-            <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 700, letterSpacing: '-0.05em', color: 'var(--text)', fontFamily: 'var(--font-heading)', lineHeight: 1.0, marginBottom: '1.25rem' }}>
-              What Chopsticks<br />actually does.
-            </h1>
-            <p style={{ fontSize: '1.05rem', color: 'var(--text-muted)', lineHeight: 1.75, maxWidth: 520, marginBottom: '2rem' }}>
-              One bot. Six capability pillars. Personal playlist channels. AI audiobook narration. Near-human agents. A full gamification platform. Raid protection. Fully programmable automation.
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <a href={BOT_INVITE} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', fontSize: '0.88rem' }}>
-                <DiscordIcon size={15} />
-                Add to Discord
-              </a>
-              <a href="/commands" className="btn btn-ghost" style={{ padding: '0.75rem 1.5rem', fontSize: '0.88rem' }}>
-                Browse commands <ArrowRightIcon size={13} />
-              </a>
-            </div>
+
+          <div className="badge" style={{ marginBottom: '1.5rem' }}>
+            <CheckIcon size={11} /> Everything included · free forever
+          </div>
+
+          <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 4.25rem)', fontWeight: 800, letterSpacing: '-0.055em',
+            color: 'var(--text)', fontFamily: 'var(--font-heading)', lineHeight: 1.0, marginBottom: '1.5rem', maxWidth: 700 }}>
+            Six systems.<br />
+            <span className="gradient-text">One bot.</span>
+          </h1>
+
+          <p style={{ fontSize: '1.05rem', color: 'var(--text-muted)', lineHeight: 1.8, maxWidth: 540, marginBottom: '2.5rem' }}>
+            Voice &amp; media, AI agents, gamification, moderation, automation, and intelligence — fully integrated,
+            open source, free. Deploy the hosted instance in 30 seconds or self-host on your own infrastructure.
+          </p>
+
+          {/* Stat pills */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.625rem', marginBottom: '2.5rem' }}>
+            {[
+              { n: '148', l: 'prefix commands' },
+              { n: '101', l: 'slash commands' },
+              { n: '11',  l: 'categories' },
+              { n: '6',   l: 'core systems' },
+              { n: '16',  l: 'agent roles' },
+            ].map(s => (
+              <div key={s.n} style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+                borderRadius: 8, padding: '0.4rem 0.75rem' }}>
+                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.1rem',
+                  color: 'var(--text)', letterSpacing: '-0.03em' }}>{s.n}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-faint)', fontFamily: 'var(--font-heading)' }}>{s.l}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <a href={BOT_INVITE} target="_blank" rel="noopener noreferrer" className="btn btn-primary"
+              style={{ padding: '0.75rem 1.5rem', fontSize: '0.88rem' }}>
+              <DiscordIcon size={15} /> Add to Discord
+            </a>
+            <a href="/commands" className="btn btn-ghost"
+              style={{ padding: '0.75rem 1.5rem', fontSize: '0.88rem' }}>
+              Browse commands <ArrowRightIcon size={13} />
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ── Feature pillars ───────────────────────────── */}
+      {/* ── Bento feature grid ────────────────────────── */}
       <section style={{ padding: '4rem 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <div style={{ marginBottom: '2.5rem' }}>
-            <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-faint)', fontFamily: 'var(--font-heading)', marginBottom: '0.625rem' }}>Six pillars</p>
-            <h2 style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
-              From music to AI agents to raid defense.
+            <p style={{ fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: 'var(--text-faint)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>What's inside</p>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 700, letterSpacing: '-0.04em',
+              color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
+              Every capability, out of the box.
             </h2>
           </div>
-          <div className="features-grid">
-            {PILLARS.map(p => (
-              <div key={p.label} className="feature-pillar" style={{ '--pillar-color': p.color } as React.CSSProperties}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-                  <div className="feature-pillar-icon" style={{ '--pillar-color': p.color } as React.CSSProperties}>
-                    <p.Icon size={20} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: p.color, fontFamily: 'var(--font-heading)', marginBottom: '0.2rem' }}>{p.label}</p>
-                    <h3 className="feature-pillar-title">{p.headline}</h3>
-                  </div>
+
+          {/* Row 1 — Voice (2/3) + Agents (1/3) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            {FEATURES.slice(0, 2).map(f => (
+              <FeatureCard key={f.label} f={f} />
+            ))}
+          </div>
+
+          {/* Row 2 — Economy, Moderation, Automation, AI (2-col each side) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+            {FEATURES.slice(2, 4).map(f => (
+              <FeatureCard key={f.label} f={f} />
+            ))}
+          </div>
+
+          {/* Row 3 — Automation + AI */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
+            {FEATURES.slice(4, 6).map(f => (
+              <FeatureCard key={f.label} f={f} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Agent Roles ───────────────────────────────── */}
+      <section style={{ padding: '4rem 0', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+        <div className="container">
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: '1rem', marginBottom: '2.5rem' }}>
+            <div>
+              <div className="badge" style={{ marginBottom: '1rem', borderColor: 'rgba(167,139,250,0.3)',
+                background: 'rgba(167,139,250,0.08)', color: '#a78bfa' }}>
+                <RadioIcon size={11} /> The Agent System
+              </div>
+              <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 700, letterSpacing: '-0.04em',
+                color: 'var(--text)', fontFamily: 'var(--font-heading)', lineHeight: 1.1 }}>
+                14 agent roles.
+              </h2>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '0.5rem', maxWidth: 480, lineHeight: 1.7 }}>
+                Each agent gets a persona, a job, and a channel. Permanent or session-based.
+                The agent system is actively in development.
+              </p>
+            </div>
+            <a href="https://discord.gg/QbS47HDdpf" target="_blank" rel="noopener noreferrer"
+              className="btn btn-ghost" style={{ fontSize: '0.82rem', padding: '0.5rem 1rem', alignSelf: 'flex-start' }}>
+              Follow development <ArrowRightIcon size={12} />
+            </a>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+            {(['Voice', 'Text', 'Competitive', 'Admin'] as RoleCat[]).map(cat => (
+              <div key={cat} style={{ background: 'var(--bg)', border: '1px solid var(--border)',
+                borderRadius: '0.875rem', overflow: 'hidden' }}>
+                {/* Category header */}
+                <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)',
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  background: `${CAT_COLORS[cat]}08` }}>
+                  <span style={{ fontSize: '1rem' }}>{CAT_ICONS[cat]}</span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: CAT_COLORS[cat], fontFamily: 'var(--font-heading)' }}>{cat} roles</span>
                 </div>
-                <ul className="feature-pillar-bullets">
-                  {p.bullets.map(b => <li key={b}>{b}</li>)}
-                </ul>
-                <div className="feature-pillar-cmds">
-                  {p.cmds.map(c => (
-                    <span key={c} className="feature-cmd-chip" style={{ '--pillar-color': p.color } as React.CSSProperties}>{c}</span>
+                {/* Roles list */}
+                <div style={{ padding: '0.25rem 0' }}>
+                  {AGENT_ROLES.filter(r => r.cat === cat).map((r, i, arr) => (
+                    <div key={r.role} style={{ padding: '0.7rem 1rem',
+                      borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                      display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.75rem', alignItems: 'start' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)',
+                        fontFamily: 'var(--font-heading)' }}>{r.role}</span>
+                      <span style={{ fontSize: '0.77rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{r.desc}</span>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -236,100 +336,105 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* ── Agent roles deep-dive ──────────────────────── */}
-      <section style={{ padding: '4rem 0', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div className="container">
-          <div style={{ marginBottom: '2.5rem', maxWidth: 600 }}>
-            <div className="badge" style={{ marginBottom: '1rem', borderColor: 'rgba(167,139,250,0.3)', background: 'rgba(167,139,250,0.08)', color: '#a78bfa' }}>
-              <RadioIcon size={11} />
-              The Agent System
-            </div>
-            <h2 style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text)', fontFamily: 'var(--font-heading)', lineHeight: 1.1, marginBottom: '1rem' }}>
-              Not bots. Workers.
-            </h2>
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: 1.75 }}>
-              An agent is a configurable actor you can deploy inside your server. Give it a name, a persona, and a job. Bind it to a channel permanently or deploy it session-by-session. The agent system is actively in development — this is exactly the kind of feature we&apos;re building together with the community.
-            </p>
-          </div>
-
-          {/* Role categories */}
-          {(['Voice', 'Text', 'Competitive', 'Admin'] as RoleCategory[]).map(cat => (
-            <div key={cat} style={{ marginBottom: '2.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1rem' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: CAT_COLORS[cat], flexShrink: 0 }} />
-                <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: CAT_COLORS[cat], fontFamily: 'var(--font-heading)' }}>{cat} roles</p>
-              </div>
-              <div className="agent-roles-grid">
-                {AGENT_ROLES.filter(r => r.cat === cat).map(r => (
-                  <div key={r.role} className="agent-role-card">
-                    <p className="agent-role-tag" style={{ color: CAT_COLORS[cat] }}>{r.cat}</p>
-                    <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)', marginBottom: '0.35rem' }}>{r.role}</p>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>{r.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          <div style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: '0.875rem', padding: '1.5rem', maxWidth: 620, marginTop: '1rem' }}>
-            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)', marginBottom: '0.4rem' }}>Constantly evolving.</p>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>The agent system is one of the most exciting parts of Chopsticks and is actively being developed. New behaviours, new roles, and new deployment patterns — watch the changelog or jump on Discord to see what&apos;s coming.</p>
-            <a href="https://discord.gg/QbS47HDdpf" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: '#a78bfa', marginTop: '0.75rem' }}>
-              Join the Discord <ArrowRightIcon size={12} />
-            </a>
-          </div>
-        </div>
-      </section>
-
       {/* ── Use cases ─────────────────────────────────── */}
       <section style={{ padding: '4rem 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <div style={{ marginBottom: '2.5rem' }}>
-            <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-faint)', fontFamily: 'var(--font-heading)', marginBottom: '0.625rem' }}>By server type</p>
-            <h2 style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
-              What does your server need?
-            </h2>
+            <p style={{ fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: 'var(--text-faint)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>By server type</p>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', fontWeight: 700, letterSpacing: '-0.04em',
+              color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>What does your server need?</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-            {USE_CASES.map((uc, i) => {
-              const colors = ['var(--accent)', '#a78bfa', '#4ade80', '#f472b6', '#facc15', '#fb923c'];
-              const c = colors[i % colors.length];
-              return (
-                <div key={uc.headline} className="feature-pillar" style={{ '--pillar-color': c, borderLeft: `3px solid ${c}` } as React.CSSProperties}>
-                  <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem' }}>{uc.headline}</p>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>{uc.desc}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            {USE_CASES.map(uc => (
+              <div key={uc.label} className="glass-card" style={{ padding: '1.5rem',
+                borderTop: `3px solid ${uc.color}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{uc.icon}</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)',
+                    fontFamily: 'var(--font-heading)' }}>{uc.label}</span>
                 </div>
-              );
-            })}
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>{uc.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── CTA ───────────────────────────────────────── */}
-      <section style={{ padding: '5rem 0', background: 'var(--surface)' }}>
-        <div className="container" style={{ textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', fontWeight: 700, letterSpacing: '-0.045em', color: 'var(--text)', fontFamily: 'var(--font-heading)', lineHeight: 1.05, marginBottom: '1rem' }}>
-            All of this. Free.
+      <section style={{ padding: '5.5rem 0', background: 'var(--surface)', position: 'relative', overflow: 'hidden' }}>
+        <div className="orb orb-blue" style={{ width: 500, height: 500, bottom: -200, right: -100, opacity: 0.2, position: 'absolute' }} />
+        <div className="container" style={{ textAlign: 'center', maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 800, letterSpacing: '-0.05em',
+            color: 'var(--text)', fontFamily: 'var(--font-heading)', lineHeight: 1.05, marginBottom: '1rem' }}>
+            All of this.<br /><span className="gradient-text">Free.</span>
           </h2>
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: 1.75, marginBottom: '2rem' }}>
-            Add the hosted instance or run it yourself. Everything here works out of the box.
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: 1.8, marginBottom: '2.25rem' }}>
+            Add the hosted instance or self-host on your own infrastructure. Every feature works out of the box.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href={BOT_INVITE} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '0.875rem 2rem', fontSize: '0.9rem' }}>
-              <DiscordIcon size={15} />
-              Add to Discord
+            <a href={BOT_INVITE} target="_blank" rel="noopener noreferrer" className="btn btn-primary"
+              style={{ padding: '0.875rem 2rem', fontSize: '0.9rem' }}>
+              <DiscordIcon size={15} /> Add to Discord
             </a>
             <a href="/self-host" className="btn btn-ghost" style={{ padding: '0.875rem 1.5rem', fontSize: '0.9rem' }}>
-              <ServerIcon size={14} />
-              Self-host
+              <ServerIcon size={14} /> Self-host
             </a>
-            <a href={GITHUB} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ padding: '0.875rem 1.5rem', fontSize: '0.9rem' }}>
-              <GitHubIcon size={14} />
-              View source
+            <a href={GITHUB} target="_blank" rel="noopener noreferrer" className="btn btn-ghost"
+              style={{ padding: '0.875rem 1.5rem', fontSize: '0.9rem' }}>
+              <GitHubIcon size={14} /> View source
             </a>
           </div>
         </div>
       </section>
     </>
+  );
+}
+
+// ── Feature bento card ─────────────────────────────────────────────────────
+
+function FeatureCard({ f }: { f: typeof FEATURES[0] }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem',
+      padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem',
+      transition: 'border-color 0.2s', minHeight: 280,
+      borderTop: `3px solid ${f.color}` }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+        <div style={{ width: 38, height: 38, borderRadius: '0.625rem', flexShrink: 0,
+          background: `${f.color}15`, border: `1px solid ${f.color}30`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: f.color }}>
+          <f.Icon size={18} />
+        </div>
+        <div>
+          <p style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: f.color, fontFamily: 'var(--font-heading)', marginBottom: '0.15rem' }}>{f.label}</p>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text)',
+            fontFamily: 'var(--font-heading)', lineHeight: 1.2 }}>{f.headline}</h3>
+        </div>
+      </div>
+
+      {/* Sub */}
+      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.65, marginTop: -4 }}>{f.sub}</p>
+
+      {/* Points */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {f.points.map(pt => (
+          <div key={pt} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+            <Check color={f.color} />
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>{pt}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Command preview */}
+      <CmdPreview cmd={f.cmd} output={f.cmdOut} color={f.color} />
+
+      {/* Chips */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+        {f.chips.map(c => <Chip key={c} label={c} color={f.color} />)}
+      </div>
+    </div>
   );
 }

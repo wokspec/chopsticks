@@ -2300,7 +2300,7 @@ footer {
 @media (max-width: 700px) {
   .discord-mock-rail    { display: none !important; }
   .discord-mock-sidebar { display: none !important; }
-  .discord-mock-body    { height: 320px !important; }
+  .discord-mock-body    { height: 380px !important; }
 }
 
 /* ── Small screens (≤480px) ──────────────────────────── */

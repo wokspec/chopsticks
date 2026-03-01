@@ -99,7 +99,7 @@ function DiscordMockup() {
   return (
     <div style={{ background: '#313338', borderRadius: '0.875rem', overflow: 'hidden',
       boxShadow: '0 40px 100px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)',
-      width: '100%', maxWidth: 520, fontFamily: "'gg sans', 'Noto Sans', sans-serif",
+      width: '100%', maxWidth: 600, fontFamily: "'gg sans', 'Noto Sans', sans-serif",
       display: 'flex', flexDirection: 'column' }}>
 
       {/* macOS chrome bar */}
@@ -114,7 +114,7 @@ function DiscordMockup() {
       </div>
 
       {/* App body */}
-      <div className="discord-mock-body" style={{ display: 'flex', height: 360 }}>
+      <div className="discord-mock-body" style={{ display: 'flex', height: 460 }}>
 
         {/* Server rail */}
         <div className="discord-mock-rail" style={{ width: 72, background: '#1e1f22', display: 'flex', flexDirection: 'column',
@@ -408,7 +408,7 @@ export default function HomePage() {
         <div className="orb orb-violet" style={{ width: 500, height: 500, bottom: -200, right: -150, opacity: 0.35 }} />
         <div className="orb"            style={{ width: 300, height: 300, top: '30%', left: '55%', background: 'radial-gradient(circle, rgba(244,114,182,0.25), transparent 70%)', opacity: 0.5 }} />
 
-        <div className="container hero-grid" style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem', alignItems: 'center', padding: '5rem 1.5rem' }}>
+        <div className="container hero-grid" style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '3rem', alignItems: 'center', padding: '5rem 1.5rem' }}>
           {/* Left */}
           <div>
             <a href="https://wokspec.org" target="_blank" rel="noopener noreferrer" className="badge" style={{ marginBottom: '1.5rem', background: 'rgba(30,30,30,0.7)', border: '1px solid rgba(180,100,30,0.35)', color: '#c8c8c8', gap: '0.5rem', textDecoration: 'none', cursor: 'pointer' }}>

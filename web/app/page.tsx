@@ -243,13 +243,11 @@ function DiscordMockup() {
 
           {/* Messages */}
           <div ref={messagesRef} style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 0.875rem',
-            display: 'flex', flexDirection: 'column', gap: '0.5rem',
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '0.5rem',
             scrollbarWidth: 'none' }}>
-            {MSGS.map((m, i) => (
+            {MSGS.map((m, i) => visible.includes(i) ? (
               <div key={i} style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start',
-                opacity: visible.includes(i) ? 1 : 0,
-                transform: visible.includes(i) ? 'translateY(0)' : 'translateY(6px)',
-                transition: 'opacity 0.35s ease, transform 0.35s ease' }}>
+                animation: 'msgFadeIn 0.35s ease both' }}>
                 <Avatar src={m.avatar} size={34} bot={m.type === 'bot'} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginBottom: '0.1rem' }}>
@@ -268,7 +266,7 @@ function DiscordMockup() {
                   {m.embed && <EmbedCard embed={m.embed} />}
                 </div>
               </div>
-            ))}
+            ) : null)}
           </div>
 
           {/* Input bar */}

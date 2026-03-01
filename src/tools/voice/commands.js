@@ -34,7 +34,7 @@ import {
   handleCustomVcModal,
   loadAndSaveCustomVcsConfig
 } from "./customVcsUi.js";
-import { ensureCustomVcsState, getCustomVcConfig } from "./customVcsState.js";
+import { ensureCustomVcsState, getCustomVcConfig, getCustomRoom, patchCustomRoom, removeCustomRoom } from "./customVcsState.js";
 import {
   OWNER_PERMISSION_FIELDS,
   describeOwnerPermissions,
@@ -127,15 +127,18 @@ async function getRoomContext(interaction, { requireControl = true } = {}) {
   const voice = await getVoiceState(interaction.guildId);
   if (!voice) return { ok: false, error: "no-voice-state" };
   voice.tempChannels ??= {};
+  voice.customRooms ??= {};
 
-  const temp = voice.tempChannels[channel.id];
-  if (!temp) return { ok: false, error: "not-temp" };
+  const temp = voice.tempChannels[channel.id] ?? null;
+  const customRoom = !temp ? (getCustomRoom(voice, channel.id) ?? null) : null;
+  if (!temp && !customRoom) return { ok: false, error: "not-temp" };
 
-  const isOwner = temp.ownerId === interaction.user.id;
+  const ownerId = temp ? temp.ownerId : customRoom.ownerId;
+  const isOwner = ownerId === interaction.user.id;
   const isAdmin = hasAdmin(interaction);
   if (requireControl && !isOwner && !isAdmin) return { ok: false, error: "not-owner" };
 
-  return { ok: true, channel, temp, isOwner, isAdmin, voice };
+  return { ok: true, channel, temp, customRoom, isOwner, isAdmin, voice };
 }
 
 function roomErrorMessage(code) {
@@ -1095,19 +1098,21 @@ export async function execute(interaction) {
     const { channel, voice } = ctx;
     const everyoneId = interaction.guild?.roles?.everyone?.id;
 
-    const lobby = voice?.lobbies?.[ctx.temp.lobbyId];
+    const lobby = ctx.temp ? (voice?.lobbies?.[ctx.temp.lobbyId] ?? null) : null;
     const ownerOverwrite = ownerPermissionOverwrite(lobby?.ownerPermissions);
+    const activeOwnerId = ctx.temp ? ctx.temp.ownerId : ctx.customRoom?.ownerId;
 
     try {
 
       if (sub === "room_status") {
-      const lobbyId = ctx.temp.lobbyId ? `<#${ctx.temp.lobbyId}>` : "n/a";
+      const lobbyId = ctx.temp?.lobbyId ? `<#${ctx.temp.lobbyId}>` : "n/a";
       const limit = Number.isFinite(channel.userLimit) ? channel.userLimit : 0;
       const overwrite = everyoneId ? channel.permissionOverwrites.cache.get(everyoneId) : null;
       const locked = Boolean(overwrite?.deny?.has(PermissionFlagsBits.Connect));
+      const roomType = ctx.temp ? "Temp Channel" : "Custom VC";
       const embed = buildEmbed(
         "Room status",
-        `Lobby: ${lobbyId}\nOwner: <@${ctx.temp.ownerId}>\nLimit: ${limit}\nLocked: ${locked ? "yes" : "no"}`
+        `Type: ${roomType}\nLobby: ${lobbyId}\nOwner: <@${activeOwnerId}>\nLimit: ${limit}\nLocked: ${locked ? "yes" : "no"}`
       );
       await interaction.reply({ embeds: [embed], ephemeral: true });
       return;
@@ -1122,7 +1127,7 @@ export async function execute(interaction) {
         return;
       }
 
-      const ownerPresent = channel.members.has(ctx.temp.ownerId);
+      const ownerPresent = channel.members.has(activeOwnerId);
       if (ownerPresent && !ctx.isAdmin) {
         await interaction.reply({
           embeds: [buildErrorEmbed("Current owner is still in the room. Ask them to transfer ownership.")],
@@ -1131,21 +1136,23 @@ export async function execute(interaction) {
         return;
       }
 
-      const res = await VoiceDomain.transferTempOwnership(guildId, channel.id, interaction.user.id);
-      if (!res.ok) {
-        await interaction.reply({
-          embeds: [buildErrorEmbed("Unable to claim this room right now.")],
-          ephemeral: true
-        });
-        return;
+      if (ctx.temp) {
+        const res = await VoiceDomain.transferTempOwnership(guildId, channel.id, interaction.user.id);
+        if (!res.ok) {
+          await interaction.reply({ embeds: [buildErrorEmbed("Unable to claim this room right now.")], ephemeral: true });
+          return;
+        }
+      } else {
+        const res = await patchCustomRoom(guildId, channel.id, { ownerId: interaction.user.id }, ctx.voice);
+        if (!res.ok) {
+          await interaction.reply({ embeds: [buildErrorEmbed("Unable to claim this room right now.")], ephemeral: true });
+          return;
+        }
       }
 
-      await channel.permissionOverwrites
-        .edit(interaction.user.id, ownerOverwrite)
-        .catch(() => {});
-
-      if (channel.permissionOverwrites.cache.has(ctx.temp.ownerId)) {
-        await channel.permissionOverwrites.delete(ctx.temp.ownerId).catch(() => {});
+      await channel.permissionOverwrites.edit(interaction.user.id, ownerOverwrite).catch(() => {});
+      if (activeOwnerId && channel.permissionOverwrites.cache.has(activeOwnerId)) {
+        await channel.permissionOverwrites.delete(activeOwnerId).catch(() => {});
       }
 
       if (lobby?.nameTemplate?.includes?.("{user}")) {
@@ -1159,24 +1166,13 @@ export async function execute(interaction) {
         guildId,
         userId: interaction.user.id,
         action: "voice.room.claim",
-        details: { channelId: channel.id, previousOwnerId: ctx.temp.ownerId, ownerId: interaction.user.id }
+        details: { channelId: channel.id, previousOwnerId: activeOwnerId, ownerId: interaction.user.id }
       });
 
       await interaction.reply({
         embeds: [buildEmbed("Room claimed", `You now own <#${channel.id}>.`)],
         ephemeral: true
       });
-      await deliverVoiceRoomDashboard({
-        guild: interaction.guild,
-        member: interaction.member,
-        roomChannel: channel,
-        tempRecord: { ...ctx.temp, ownerId: interaction.user.id },
-        lobby,
-        voice,
-        modeOverride: null,
-        interactionChannel: interaction.channel,
-        reason: "ownership-transfer"
-      }).catch(() => {});
       await refreshRegisteredRoomPanelsForRoom(interaction.guild, channel.id, "claim").catch(() => {});
       return;
     }
@@ -1197,7 +1193,11 @@ export async function execute(interaction) {
         } catch {}
       }
 
-      await removeTempChannel(guildId, channel.id, voice).catch(() => {});
+      if (ctx.temp) {
+        await removeTempChannel(guildId, channel.id, voice).catch(() => {});
+      } else {
+        await removeCustomRoom(guildId, channel.id, voice).catch(() => {});
+      }
       await channel.delete().catch(() => {});
 
       await auditLog({
@@ -1274,21 +1274,23 @@ export async function execute(interaction) {
         return;
       }
 
-      const res = await VoiceDomain.transferTempOwnership(guildId, channel.id, target.id);
-      if (!res.ok) {
-        await interaction.reply({
-          embeds: [buildErrorEmbed("Unable to transfer ownership right now.")],
-          ephemeral: true
-        });
-        return;
+      if (ctx.temp) {
+        const res = await VoiceDomain.transferTempOwnership(guildId, channel.id, target.id);
+        if (!res.ok) {
+          await interaction.reply({ embeds: [buildErrorEmbed("Unable to transfer ownership right now.")], ephemeral: true });
+          return;
+        }
+      } else {
+        const res = await patchCustomRoom(guildId, channel.id, { ownerId: target.id }, ctx.voice);
+        if (!res.ok) {
+          await interaction.reply({ embeds: [buildErrorEmbed("Unable to transfer ownership right now.")], ephemeral: true });
+          return;
+        }
       }
 
-      await channel.permissionOverwrites
-        .edit(target.id, ownerOverwrite)
-        .catch(() => {});
-
-      if (ctx.temp.ownerId && channel.permissionOverwrites.cache.has(ctx.temp.ownerId)) {
-        await channel.permissionOverwrites.delete(ctx.temp.ownerId).catch(() => {});
+      await channel.permissionOverwrites.edit(target.id, ownerOverwrite).catch(() => {});
+      if (activeOwnerId && channel.permissionOverwrites.cache.has(activeOwnerId)) {
+        await channel.permissionOverwrites.delete(activeOwnerId).catch(() => {});
       }
 
       const targetMember = channel.members.get(target.id) ?? null;
@@ -1303,27 +1305,14 @@ export async function execute(interaction) {
         guildId,
         userId: interaction.user.id,
         action: "voice.room.transfer",
-        details: { channelId: channel.id, previousOwnerId: ctx.temp.ownerId, ownerId: target.id }
+        details: { channelId: channel.id, previousOwnerId: activeOwnerId, ownerId: target.id }
       });
 
       await interaction.reply({
         embeds: [buildEmbed("Room transferred", `Ownership transferred to <@${target.id}>.`)],
         ephemeral: true
       });
-      if (targetMember) {
-        await deliverVoiceRoomDashboard({
-          guild: interaction.guild,
-          member: targetMember,
-          roomChannel: channel,
-          tempRecord: { ...ctx.temp, ownerId: target.id },
-          lobby,
-          voice,
-          modeOverride: null,
-          interactionChannel: interaction.channel,
-          reason: "ownership-transfer"
-        }).catch(() => {});
-      }
-      await refreshRegisteredRoomPanelsForRoom(interaction.guild, channel.id, "transfer").catch(() => {});
+      await refreshRegisteredRoomPanelsForRoom(interaction.guild, channel.id, "ownership-transfer").catch(() => {});
       return;
     }
 

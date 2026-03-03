@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Header, Footer } from './layout-components';
 import CursorTracker from './cursor';
+import { EralCompanion } from '../../components/EralCompanion';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -10,7 +11,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: { default: 'Chopsticks', template: '%s — Chopsticks' },
-  description: 'A full-featured Discord bot with 162 prefix commands — music, moderation, economy, AI, games, leveling, and more. Free, open source, and self-hostable.',
+  description: 'A full-featured Discord bot with 162 prefix commands — music, moderation, economy, AI, games, leveling,  and more. Free, open source, and self-hostable.',
   metadataBase: new URL('https://chopsticks.wokspec.org'),
   robots: { index: true, follow: true },
   openGraph: {
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main id="main-content">{children}</main>
         <Footer />
+        <EralCompanion />
       </body>
     </html>
   );

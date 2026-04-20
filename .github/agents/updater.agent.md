@@ -94,6 +94,7 @@ fix|docs|chore|feat: [short description of what was fixed]
 - If a finding requires a **README rewrite**, invoke or ask the user to invoke the Beautiful README Builder agent
 - If a finding requires a **new audit** to verify a fix, note that a re-audit is needed rather than self-certifying
 - If a finding is outside scope (e.g., requires live production access or secret management), flag it explicitly and skip
+- If a finding keeps recurring across repos, capture it in a playbook instead of fixing it in chat forever
 
 ---
 
@@ -105,6 +106,7 @@ When updating multiple repos:
 2. Then apply repo-specific fixes
 3. Do not introduce inconsistencies across repos while fixing inconsistencies — use the same fix pattern everywhere
 4. After all changes, do a final cross-check: are any cross-repo references now broken by the changes?
+5. If the same change pattern had to be explained or repeated several times, add or update the playbook entry that should have prevented the drift
 
 ---
 

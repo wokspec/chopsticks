@@ -26,6 +26,9 @@ This is the living map of everything Mad House owns. The Librarian knows this ro
 | `madebymadhouse/bot-dev-playbook` | madebymadhouse | Shared workflow, standards, runbooks for Discord bot work | Playbook |
 | `madebymadhouse/vps-maintenance-playbook` | madebymadhouse | VPS maintenance notebook for the live Mad House server | Playbook |
 | `madebymadhouse/chopsticks-lean` | madebymadhouse | Live Mad House Discord bot — moderation, economy, voice, leveling | Bot |
+| `madebymadhouse/.github` | madebymadhouse | Org profile, community health files, and shared workflow templates | Tooling |
+| `madebymadhouse/chopsticks` | madebymadhouse | Full-stack Discord bot with music, web, and agent systems | Bot |
+| `madebymadhouse/liquibar` | madebymadhouse | Dock runtime monorepo in prototype phase | Runtime |
 
 > [!NOTE]
 > When a new repo is created or transferred, add it to this table before doing anything else.
@@ -35,6 +38,10 @@ This is the living map of everything Mad House owns. The Librarian knows this ro
 ## The Unified Standard
 
 Every Mad House repo must comply with this standard. No exceptions. Check each item on every run.
+
+Canonical org-wide repair runbook:
+
+`madebymadhouse/bot-dev-playbook/RUNBOOKS/org-standardization-pass.md`
 
 ### Identity
 
@@ -202,3 +209,4 @@ Never call multiple agents for the same repo at the same time. The Librarian seq
 4. **Cross-repo references are always in sync.** If a repo moves, every other repo that links to it gets updated in the same commit.
 5. **The Librarian never breaks things faster than they can be fixed.** If a fix is destructive or touches > 5 files, produce a plan and get confirmation first.
 6. **Mad House is Mad House.** Two words, both capitalized. Every time.
+7. **If the same cleanup happens twice, capture it.** Update the playbook so the next pass starts from docs, not chat.

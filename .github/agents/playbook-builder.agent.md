@@ -20,6 +20,9 @@ Before doing anything substantial, read:
 - `PATTERNS/playbook-repo-shape.md`
 - `RUNBOOKS/create-new-playbook.md`
 
+When the repeated problem is org-wide repo drift, also read:
+- `RUNBOOKS/org-standardization-pass.md` if it exists
+
 ## Primary Goals
 - identify the real repeated problem hidden inside chat history
 - define the smallest repo or doc set that solves that problem
@@ -40,3 +43,12 @@ Before doing anything substantial, read:
 4. Prefer real runbooks and handoffs over abstract philosophy.
 5. Keep shared guidance separate from app or environment specifics.
 6. Leave behind an agent or entrypoint only if it helps a fresh operator start correctly.
+
+## Common Mad House Capture Targets
+
+These are strong signals that a chat should become a durable playbook entry:
+- org-wide standardization or repo unification passes
+- repo transfer and post-transfer cleanup flow
+- branch / PR / merge workflow for humans + agents
+- agent sync procedure from `madebymadhouse/agents`
+- merge ordering when multiple repos depend on each other

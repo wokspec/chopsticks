@@ -49,6 +49,7 @@ Read the request and map every piece of it to an agent. Use this as your guide:
 | VPS maintenance, server ops, runbooks | `@vps-maintenance-planner` |
 | Discord bot workflow, handoffs, standards | `@bot-dev-playbook` |
 | Turning repeated work into a playbook repo | `@playbook-builder` |
+| Turning a repeated org-wide cleanup into a durable runbook | `@playbook-builder`, then `@bot-dev-playbook` |
 | Session end, handoff, state write | `@context-keeper` last |
 
 ---
@@ -128,6 +129,9 @@ These come up constantly. Know how to route them immediately.
 
 **"Clean up / unify everything"**
 → `@orchestrator` → (full fleet pass per repo) → `@context-keeper` (write final state)
+
+**"This chat should become a guide / runbook / playbook"**
+→ `@playbook-builder` (capture the repeated workflow) → `@writer` (humanize) → `@git-keeper` (branch / commit / PR)
 
 **"Update all READMEs"**
 → `@beautiful-readme` (structure) → `@writer` (voice) per repo in sequence
